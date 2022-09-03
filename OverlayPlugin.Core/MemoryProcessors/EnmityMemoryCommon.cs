@@ -117,7 +117,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors
         public Single PosX;
         public Single PosY;
         public Single PosZ;
-        public Single Rotation;
+        public Single Heading;
         public Single Radius;
 
         public string Distance;
@@ -126,6 +126,16 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors
         public byte RawEffectiveDistance;
 
         public List<EffectEntry> Effects;
+
+        public uint BNpcID;
+        public int CurrentMP;
+        public int MaxMP;
+        public byte Level;
+
+        public uint BNpcNameID;
+
+        public ushort WorldID; // Might be inverted with CurrentWorldID
+        public ushort CurrentWorldID;
 
         private Single GetDistance(Combatant target)
         {

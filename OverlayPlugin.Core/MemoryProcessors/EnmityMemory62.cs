@@ -297,8 +297,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors
             {
                 CombatantMemory mem = *(CombatantMemory*)&p[0];
                 ObjectType type = (ObjectType)mem.Type;
-                if (type != ObjectType.PC && type != ObjectType.Monster)
-                    return null;
                 if (mem.ID == 0 || mem.ID == emptyID)
                     return null;
             }
@@ -322,26 +320,20 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors
             [FieldOffset(0x74)]
             public uint ID;
 
+            [FieldOffset(0x80)]
+            public uint BNpcID;
+
             [FieldOffset(0x84)]
             public uint OwnerID;
 
             [FieldOffset(0x8C)]
-            public byte Type;
-
-            [FieldOffset(0x19C3)]
-            public byte MonsterType;
-
-            [FieldOffset(0x94)]
-            public byte Status;
-
-            [FieldOffset(0x104)]
-            public int ModelStatus;
-
-            [FieldOffset(0x19DF)]
-            public byte AggressionStatus;
+            public byte Type; // Maybe rename `type`?
 
             [FieldOffset(0x92)]
             public byte EffectiveDistance;
+
+            [FieldOffset(0x94)]
+            public byte Status;
 
             [FieldOffset(0xA0)]
             public Single PosX;
@@ -353,13 +345,13 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors
             public Single PosZ;
 
             [FieldOffset(0xB0)]
-            public Single Rotation;
+            public Single Heading;
 
             [FieldOffset(0XC0)]
             public Single Radius;
 
-            [FieldOffset(0x1A68)]
-            public uint TargetID;
+            [FieldOffset(0x104)]
+            public int ModelStatus;
 
             [FieldOffset(0x1C4)]
             public int CurrentHP;
@@ -367,11 +359,39 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors
             [FieldOffset(0x1C8)]
             public int MaxHP;
 
+            [FieldOffset(0x1CC)]
+            public int CurrentMP;
+
+            [FieldOffset(0x1D0)]
+            public int MaxMP;
+
             [FieldOffset(0x1E0)]
             public byte Job;
 
+            [FieldOffset(0x1E1)]
+            public byte Level;
+
+            [FieldOffset(0x19C3)]
+            public byte MonsterType;
+
+            [FieldOffset(0x19DF)]
+            public byte AggressionStatus;
+
+            [FieldOffset(0x1A68)]
+            public uint TargetID;
+
+            [FieldOffset(0x1AAC)]
+            public uint BNpcNameID;
+
+            [FieldOffset(0x1AC8)]
+            public ushort CurrentWorldID;
+
+            [FieldOffset(0x1ACA)]
+            public ushort WorldID;
+
             [FieldOffset(0x1B48)]
             public fixed byte Effects[effectBytes];
+            // Missing PartyType
         }
 
         [StructLayout(LayoutKind.Explicit, Size = 12)]
@@ -421,12 +441,22 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors
                     PosX = mem.PosX,
                     PosY = mem.PosY,
                     PosZ = mem.PosZ,
-                    Rotation = mem.Rotation,
+                    Heading = mem.Heading,
                     Radius = mem.Radius,
                     TargetID = mem.TargetID,
                     CurrentHP = mem.CurrentHP,
                     MaxHP = mem.MaxHP,
                     Effects = exceptEffects ? new List<EffectEntry>() : GetEffectEntries(mem.Effects, (ObjectType)mem.Type, mycharID),
+
+                    BNpcID = mem.BNpcID,
+                    CurrentMP = mem.CurrentMP,
+                    MaxMP = mem.MaxMP,
+                    Level = mem.Level,
+
+                    BNpcNameID = mem.BNpcNameID,
+
+                    WorldID = mem.WorldID,
+                    CurrentWorldID = mem.CurrentWorldID,
                 };
                 combatant.IsTargetable = 
                     (combatant.ModelStatus == ModelStatus.Visible) 
