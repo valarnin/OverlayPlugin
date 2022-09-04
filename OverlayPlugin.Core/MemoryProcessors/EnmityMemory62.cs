@@ -439,8 +439,9 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors
                     AggressionStatus = (AggressionStatus)(mem.AggressionStatus - (mem.AggressionStatus / 4) * 4),
                     RawEffectiveDistance = mem.EffectiveDistance,
                     PosX = mem.PosX,
-                    PosY = mem.PosY,
-                    PosZ = mem.PosZ,
+                    // Y and Z are deliberately swapped to match FFXIV_ACT_Plugin's data model
+                    PosY = mem.PosZ,
+                    PosZ = mem.PosY,
                     Heading = mem.Heading,
                     Radius = mem.Radius,
                     TargetID = mem.TargetID,
