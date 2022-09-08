@@ -134,8 +134,20 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors
 
         public uint BNpcNameID;
 
-        public ushort WorldID; // Might be inverted with CurrentWorldID
+        public ushort WorldID;
         public ushort CurrentWorldID;
+        public uint NPCTargetID;
+        public ushort CurrentGP;
+        public ushort MaxGP;
+        public ushort CurrentCP;
+        public ushort MaxCP;
+        public uint PCTargetID;
+        public byte IsCasting1;
+        public byte IsCasting2;
+        public uint CastBuffID;
+        public uint CastTargetID;
+        public float CastDurationCurrent;
+        public float CastDurationMax;
 
         private Single GetDistance(Combatant target)
         {

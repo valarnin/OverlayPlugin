@@ -347,7 +347,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors
             [FieldOffset(0xB0)]
             public Single Heading;
 
-            [FieldOffset(0XC0)]
+            [FieldOffset(0xC0)]
             public Single Radius;
 
             [FieldOffset(0x104)]
@@ -365,11 +365,26 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors
             [FieldOffset(0x1D0)]
             public int MaxMP;
 
+            [FieldOffset(0x1D4)]
+            public ushort CurrentGP;
+
+            [FieldOffset(0x1D6)]
+            public ushort MaxGP;
+
+            [FieldOffset(0x1D8)]
+            public ushort CurrentCP;
+
+            [FieldOffset(0x1DA)]
+            public ushort MaxCP;
+
             [FieldOffset(0x1E0)]
             public byte Job;
 
             [FieldOffset(0x1E1)]
             public byte Level;
+
+            [FieldOffset(0xC60)]
+            public uint PCTargetID;
 
             [FieldOffset(0x19C3)]
             public byte MonsterType;
@@ -378,7 +393,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors
             public byte AggressionStatus;
 
             [FieldOffset(0x1A68)]
-            public uint TargetID;
+            public uint NPCTargetID;
 
             [FieldOffset(0x1AAC)]
             public uint BNpcNameID;
@@ -391,6 +406,24 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors
 
             [FieldOffset(0x1B48)]
             public fixed byte Effects[effectBytes];
+
+            [FieldOffset(0x1CD0)]
+            public byte IsCasting1;
+
+            [FieldOffset(0x1CD2)]
+            public byte IsCasting2;
+
+            [FieldOffset(0x1CD4)]
+            public uint CastBuffID;
+
+            [FieldOffset(0x1CE0)]
+            public uint CastTargetID;
+
+            [FieldOffset(0x1D04)]
+            public float CastDurationCurrent;
+
+            [FieldOffset(0x1D08)]
+            public float CastDurationMax;
             // Missing PartyType
         }
 
@@ -437,6 +470,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors
                     ModelStatus = (ModelStatus)mem.ModelStatus,
                     // Normalize all possible aggression statuses into the basic 4 ones.
                     AggressionStatus = (AggressionStatus)(mem.AggressionStatus - (mem.AggressionStatus / 4) * 4),
+                    NPCTargetID = mem.NPCTargetID,
                     RawEffectiveDistance = mem.EffectiveDistance,
                     PosX = mem.PosX,
                     // Y and Z are deliberately swapped to match FFXIV_ACT_Plugin's data model
@@ -444,7 +478,8 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors
                     PosZ = mem.PosY,
                     Heading = mem.Heading,
                     Radius = mem.Radius,
-                    TargetID = mem.TargetID,
+                    // In-memory there are separate values for PC's current target and NPC's current target
+                    TargetID = mem.PCTargetID != 0xE0000000 ? mem.PCTargetID : mem.NPCTargetID,
                     CurrentHP = mem.CurrentHP,
                     MaxHP = mem.MaxHP,
                     Effects = exceptEffects ? new List<EffectEntry>() : GetEffectEntries(mem.Effects, (ObjectType)mem.Type, mycharID),
@@ -452,12 +487,24 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors
                     BNpcID = mem.BNpcID,
                     CurrentMP = mem.CurrentMP,
                     MaxMP = mem.MaxMP,
+                    CurrentGP = mem.CurrentGP,
+                    MaxGP = mem.MaxGP,
+                    CurrentCP = mem.CurrentCP,
+                    MaxCP = mem.MaxCP,
                     Level = mem.Level,
+                    PCTargetID = mem.PCTargetID,
 
                     BNpcNameID = mem.BNpcNameID,
 
                     WorldID = mem.WorldID,
                     CurrentWorldID = mem.CurrentWorldID,
+
+                    IsCasting1 = mem.IsCasting1,
+                    IsCasting2 = mem.IsCasting2,
+                    CastBuffID = mem.CastBuffID,
+                    CastTargetID = mem.CastTargetID,
+                    CastDurationCurrent = mem.CastDurationCurrent,
+                    CastDurationMax = mem.CastDurationMax,
                 };
                 combatant.IsTargetable = 
                     (combatant.ModelStatus == ModelStatus.Visible) 
