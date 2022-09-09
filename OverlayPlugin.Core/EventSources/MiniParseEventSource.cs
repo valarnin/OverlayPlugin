@@ -84,6 +84,7 @@ namespace RainbowMage.OverlayPlugin.EventSources
         {
             this.Name = "MiniParse";
             this.repository = container.Resolve<FFXIVRepository>();
+            var partyListMemory = new MemoryProcessors.PartyMemory62(container);
 
             // FileChanged isn't actually raised by this event source. That event is generated in MiniParseOverlay directly.
             RegisterEventTypes(new List<string> {
@@ -149,6 +150,12 @@ namespace RainbowMage.OverlayPlugin.EventSources
                 {
                     combatants
                 });
+            });
+
+            RegisterEventHandler("getPartyList", (msg) =>
+            {
+                var partyList = partyListMemory.GetPartyList();
+                return JObject.FromObject(partyList);
             });
 
             RegisterEventHandler("saveData", (msg) =>

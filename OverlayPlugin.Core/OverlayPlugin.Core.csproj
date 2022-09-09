@@ -100,12 +100,14 @@
     <Compile Include="MemoryProcessors\EnmityMemory55.cs" />
     <Compile Include="MemoryProcessors\EnmityMemory54.cs" />
     <Compile Include="MemoryProcessors\EnmityMemoryCommon.cs" />
+    <Compile Include="MemoryProcessors\PartyMemoryCommon.cs" />
     <Compile Include="NetworkProcessors\FateWatcher.cs" />
     <Compile Include="MemoryProcessors\FFXIVProcess.cs" />
     <Compile Include="MemoryProcessors\FFXIVProcessCn.cs" />
     <Compile Include="MemoryProcessors\FFXIVProcessIntl.cs" />
     <Compile Include="MemoryProcessors\FFXIVProcessKo.cs" />
     <Compile Include="MemoryProcessors\FFXIVMemory.cs" />
+    <Compile Include="MemoryProcessors\PartyMemory62.cs" />
     <Compile Include="Integration\FFXIVExportVariables.cs" />
     <Compile Include="Integration\FFXIVRepository.cs" />
     <Compile Include="JSApi\IApiBase.cs" />
