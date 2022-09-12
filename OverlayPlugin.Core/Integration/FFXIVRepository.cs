@@ -303,7 +303,7 @@ namespace RainbowMage.OverlayPlugin
         {
             var plugin = GetPluginData();
             if (plugin == null) return false;
-            var iocContainer = plugin.GetType().GetField("_iocContainer", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(plugin);
+            var iocContainer = plugin.pluginObj.GetType().GetField("_iocContainer", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(plugin.pluginObj);
             var getServiceMethod = iocContainer.GetType().GetMethod("GetService");
             var logOutput = getServiceMethod.Invoke(iocContainer, new object[] { typeof(FFXIV_ACT_Plugin.Logfile.ILogOutput) }) as FFXIV_ACT_Plugin.Logfile.ILogOutput;
             logOutput.WriteLine((FFXIV_ACT_Plugin.Logfile.LogMessageType)ID, DateTime.Now, line);

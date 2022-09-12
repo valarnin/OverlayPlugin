@@ -105,13 +105,10 @@ namespace RainbowMage.OverlayPlugin
                     return null;
                 }
             }
-            else
-            {
-                // Write out that a new log line has been registered. Prevent newlines in the string input for sanity.
-                var Source = entry.Source.Replace("\r", "\\r").Replace("\n", "\\n");
-                repository.WriteLogLineImpl(registeredCustomLogLineID, $"{ID}|{Source}|{entry.Version}");
-            }
-            registry.Add(ID, entry);
+            // Write out that a new log line has been registered. Prevent newlines in the string input for sanity.
+            var Source = entry.Source.Replace("\r", "\\r").Replace("\n", "\\n");
+            repository.WriteLogLineImpl(registeredCustomLogLineID, $"{ID}|{Source}|{entry.Version}");
+            registry[ID] = entry;
             return (line) => {
                 if (line.Contains("\r") || line.Contains("\n"))
                 {
@@ -139,7 +136,7 @@ namespace RainbowMage.OverlayPlugin
 
         public override string ToString()
         {
-            return Source + "|" + ID;
+            return Source + "|" + ID + "|" + Version;
         }
 
         public override bool Equals(object obj)
