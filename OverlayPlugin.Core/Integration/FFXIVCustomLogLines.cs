@@ -42,16 +42,18 @@ namespace RainbowMage.OverlayPlugin
                             logger.Log(LogLevel.Warning, $"Reserved log line entry missing StartID ({reservedDataEntry.StartID}) or EndID ({reservedDataEntry.EndID}).");
                             continue;
                         }
-                        for (uint ID = reservedDataEntry.StartID.Value; ID < reservedDataEntry.EndID.Value; ++ID)
+                        var Source = reservedDataEntry.Source;
+                        var Version = reservedDataEntry.Version.Value;
+                        var StartID = reservedDataEntry.StartID.Value;
+                        var EndID = reservedDataEntry.EndID.Value;
+                        logger.Log(LogLevel.Debug, $"Reserving log line entries {StartID}-{EndID} for Source {Source}, Version {Version}.");
+                        for (uint ID = StartID; ID < EndID; ++ID)
                         {
                             if (registry.ContainsKey(ID))
                             {
-                                logger.Log(LogLevel.Warning, $"Reserved log line entry already registered ({ID}).");
+                                logger.Log(LogLevel.Error, $"Reserved log line entry already registered ({ID}).");
                                 continue;
                             }
-                            var Source = reservedDataEntry.Source;
-                            var Version = reservedDataEntry.Version.Value;
-                            logger.Log(LogLevel.Debug, $"Reserving log line entry for ID {ID}, Source {Source}, Version {Version}.");
                             registry[ID] = new LogLineRegistryEntry()
                             {
                                 ID = ID,
@@ -65,7 +67,7 @@ namespace RainbowMage.OverlayPlugin
                         var ID = reservedDataEntry.ID.Value;
                         if (registry.ContainsKey(ID))
                         {
-                            logger.Log(LogLevel.Warning, $"Reserved log line entry already registered ({ID}).");
+                            logger.Log(LogLevel.Error, $"Reserved log line entry already registered ({ID}).");
                             continue;
                         }
                         var Source = reservedDataEntry.Source;
@@ -97,7 +99,7 @@ namespace RainbowMage.OverlayPlugin
             var ID = entry.ID;
             if (registry.ContainsKey(ID))
             {
-                // Allow re-registering the handler if the ID, Source, and Version match.
+                // Allow re-registering the handler if the ID and Source match.
                 // Implicitly don't allow re-registering the same handler if the Version changes to prevent log file confusion.
                 if (!registry[ID].Equals(entry))
                 {
@@ -148,7 +150,7 @@ namespace RainbowMage.OverlayPlugin
 
             var otherEntry = (ILogLineRegistryEntry)obj;
 
-            return ID == otherEntry.ID && Source == otherEntry.Source && Version == otherEntry.Version;
+            return ID == otherEntry.ID && Source == otherEntry.Source;
         }
 
         public override int GetHashCode()
@@ -156,7 +158,6 @@ namespace RainbowMage.OverlayPlugin
             int hash = 17;
             hash = hash * 31 + ID.GetHashCode();
             hash = hash * 31 + Source.GetHashCode();
-            hash = hash * 31 + Version.GetHashCode();
             return hash;
         }
     }
