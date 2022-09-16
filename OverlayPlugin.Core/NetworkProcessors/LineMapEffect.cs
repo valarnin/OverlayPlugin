@@ -4,29 +4,6 @@ using System.Runtime.InteropServices;
 
 namespace RainbowMage.OverlayPlugin.NetworkProcessors
 {
-    internal static class MapEffectOpcodes
-    {
-        public const uint LogFileLineID = 257;
-
-        public const ushort OPCODE_2022_05_27 = 0x2E0;
-        public const ushort SIZE_2022_05_27 = 0x0B;
-
-        public const ushort OPCODE_2022_06_21 = 0x27B;
-        public const ushort SIZE_2022_06_21 = 0x0B;
-
-        public const ushort OPCODE_2022_07_08 = 0x7B;
-        public const ushort SIZE_2022_07_08 = 0x0B;
-
-        public const ushort OPCODE_2022_08_17 = 0x195;
-        public const ushort SIZE_2022_08_17 = 0x0B;
-
-        public const ushort OPCODE_2022_08_20 = 0x9A;
-        public const ushort SIZE_2022_08_20 = 0x0B;
-
-        public const ushort OPCODE_2022_08_25 = 0x24A;
-        public const ushort SIZE_2022_08_25 = 0x0B;
-    }
-
     [Serializable]
     [StructLayout(LayoutKind.Explicit)]
     internal struct MapEffect_v62
@@ -50,32 +27,14 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
 
     public class LineMapEffect
     {
+        public const uint LogFileLineID = 257;
         private ILogger logger;
-        private readonly ushort packetOpcode;
-        private readonly ushort packetSize;
+        private OverlayPluginLogLineConfig opcodeConfig;
+        private IOpcodeConfigEntry opcode = null;
         private readonly int offsetMessageType;
         private readonly int offsetPacketData;
 
         private Func<string, bool> logWriter;
-
-        [Serializable]
-        [StructLayout(LayoutKind.Explicit)]
-        public struct MapEffectData
-        {
-
-            [FieldOffset(0x20)]
-            public uint popTime;
-            [FieldOffset(0x24)]
-            public ushort timeRemaining;
-            [FieldOffset(0x28)]
-            public byte ceKey;
-            [FieldOffset(0x29)]
-            public byte numPlayers;
-            [FieldOffset(0x2A)]
-            public byte status;
-            [FieldOffset(0x2C)]
-            public byte progress;
-        };
 
         public LineMapEffect(TinyIoCContainer container)
         {
@@ -84,17 +43,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             var netHelper = container.Resolve<NetworkParser>();
             if (!ffxiv.IsFFXIVPluginPresent())
                 return;
-
-            switch (ffxiv.GetLocaleString())
-            {
-                // @TODO: Someone with access to these clients, map these
-                case "ko":
-                case "cn":
-                default:
-                    packetOpcode = MapEffectOpcodes.OPCODE_2022_08_25;
-                    packetSize = MapEffectOpcodes.SIZE_2022_08_25;
-                    break;
-            }
+            opcodeConfig = container.Resolve<OverlayPluginLogLineConfig>();
             try
             {
                 var mach = Assembly.Load("Machina.FFXIV");
@@ -115,19 +64,28 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             this.logWriter = customLogLines.RegisterCustomLogLine(new LogLineRegistryEntry()
             {
                 Source = "OverlayPlugin",
-                ID = MapEffectOpcodes.LogFileLineID,
+                ID = LogFileLineID,
                 Version = 1,
             });
         }
 
         private unsafe void MessageReceived(string id, long epoch, byte[] message)
         {
-            if (message.Length < packetSize)
+            // Wait for network data to actually fetch opcode info from file and register log line
+            // This is because the FFXIV_ACT_Plugin's `GetGameVersion` method only returns valid data
+            // if the player is currently logged in/a network connection is active
+            if (opcode == null)
+            {
+                opcode = opcodeConfig["MapEffect"];
+                logger.Log(LogLevel.Error, $"MapEffect: {opcode.opcode}, {opcode.size}");
+            }
+
+            if (message.Length < opcode.size + offsetPacketData)
                 return;
 
             fixed (byte* buffer = message)
             {
-                if (*(ushort*)&buffer[offsetMessageType] == packetOpcode)
+                if (*(ushort*)&buffer[offsetMessageType] == opcode.opcode)
                 {
                     MapEffect_v62 mapEffectPacket = *(MapEffect_v62*)&buffer[offsetPacketData];
                     logWriter(mapEffectPacket.ToString());
