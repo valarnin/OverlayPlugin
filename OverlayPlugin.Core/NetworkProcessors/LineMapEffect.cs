@@ -77,7 +77,6 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             if (opcode == null)
             {
                 opcode = opcodeConfig["MapEffect"];
-                logger.Log(LogLevel.Error, $"MapEffect: {opcode.opcode}, {opcode.size}");
             }
 
             if (message.Length < opcode.size + offsetPacketData)
