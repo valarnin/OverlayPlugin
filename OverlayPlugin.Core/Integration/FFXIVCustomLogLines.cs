@@ -106,7 +106,8 @@ namespace RainbowMage.OverlayPlugin
                         if (lineParts.Length == 3)
                         {
                             uint lineID = UInt32.Parse(lineParts[0]);
-                            if (registry.ContainsKey(lineID))
+                            // Only reformat log line if it's not already formatted
+                            if (registry.ContainsKey(lineID) && logInfo.logLine != null && logInfo.logLine[0] != '[')
                             {
                                 ILogLineRegistryEntry entry = registry[lineID];
                                 if (entry.Source != "FFXIV_ACT_Plugin")
