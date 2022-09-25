@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 using Newtonsoft.Json;
-using Advanced_Combat_Tracker;
 
 namespace RainbowMage.OverlayPlugin
 {
@@ -98,31 +97,6 @@ namespace RainbowMage.OverlayPlugin
                     var Name = entry.Name.Replace("\r", "\\r").Replace("\n", "\\n");
                     repository.WriteLogLineImpl(registeredCustomLogLineID, $"{registeredCustomLogLineID}|{Source}|{Name}|{entry.Version}");
                 }
-
-                ActGlobals.oFormActMain.BeforeLogLineRead += (isImport, logInfo) => {
-                    try
-                    {
-                        string[] lineParts = logInfo.originalLogLine.Split(new char[] { '|' }, 3);
-                        if (lineParts.Length == 3)
-                        {
-                            uint lineID = UInt32.Parse(lineParts[0]);
-                            // Only reformat log line if it's not already formatted
-                            if (registry.ContainsKey(lineID) && logInfo.logLine != null && logInfo.logLine[0] != '[')
-                            {
-                                ILogLineRegistryEntry entry = registry[lineID];
-                                if (entry.Source != "FFXIV_ACT_Plugin")
-                                {
-                                    logInfo.detectedType = (int)lineID;
-                                    logInfo.logLine = $"[{logInfo.detectedTime:HH:mm:ss.fff}] {entry.Name} {logInfo.detectedType:X8}:{lineParts[2].Replace('|', ':')}";
-                                }
-                            }
-                        }
-                    }
-                    catch (Exception)
-                    {
-                        // TODO: Maybe log this with a max of 10 then stop logging?
-                    }
-                };
             } catch(Exception ex)
             {
                 logger.Log(LogLevel.Error, string.Format(Resources.ErrorCouldNotLoadReservedLogLines, ex));
