@@ -13,6 +13,13 @@ using RainbowMage.OverlayPlugin.EventSources;
 using RainbowMage.OverlayPlugin.NetworkProcessors;
 using RainbowMage.OverlayPlugin.Integration;
 using RainbowMage.OverlayPlugin.Controls;
+using RainbowMage.OverlayPlugin.MemoryProcessors;
+using RainbowMage.OverlayPlugin.MemoryProcessors.Combatant;
+using RainbowMage.OverlayPlugin.MemoryProcessors.Target;
+using RainbowMage.OverlayPlugin.MemoryProcessors.Aggro;
+using RainbowMage.OverlayPlugin.MemoryProcessors.Enmity;
+using RainbowMage.OverlayPlugin.MemoryProcessors.EnmityHud;
+using RainbowMage.OverlayPlugin.MemoryProcessors.InCombat;
 
 namespace RainbowMage.OverlayPlugin
 {
@@ -242,6 +249,16 @@ namespace RainbowMage.OverlayPlugin
                             _container.Register(new TriggIntegration(_container));
                             _container.Register(new FFXIVCustomLogLines(_container));
                             _container.Register(new OverlayPluginLogLines(_container));
+
+                            // Initialize FFXIV memory reading subcomponents. Order here is important.
+                            // Must be done before loading addons.
+                            _container.Register(new FFXIVMemory(_container));
+                            _container.Register(new CombatantMemoryManager(_container));
+                            _container.Register(new TargetMemoryManager(_container));
+                            _container.Register(new AggroMemoryManager(_container));
+                            _container.Register(new EnmityMemoryManager(_container));
+                            _container.Register(new EnmityHudMemoryManager(_container));
+                            _container.Register(new InCombatMemoryManager(_container));
 
                             // This timer runs on the UI thread (it has to since we create UI controls) but LoadAddons()
                             // can block for some time. We run it on the background thread to avoid blocking the UI.

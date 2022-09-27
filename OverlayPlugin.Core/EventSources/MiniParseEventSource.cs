@@ -7,13 +7,13 @@ using Newtonsoft.Json.Linq;
 using Advanced_Combat_Tracker;
 using System.Diagnostics;
 using System.Windows.Forms;
-using FFXIV_ACT_Plugin.Common.Models;
 using RainbowMage.OverlayPlugin.NetworkProcessors;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Reflection;
-using System.Runtime.InteropServices;
 using FFXIV_ACT_Plugin.Common;
+using RainbowMage.OverlayPlugin.MemoryProcessors.Combatant;
+
+using PluginCombatant = FFXIV_ACT_Plugin.Common.Models.Combatant;
 
 namespace RainbowMage.OverlayPlugin.EventSources
 {
@@ -53,6 +53,7 @@ namespace RainbowMage.OverlayPlugin.EventSources
         private const string BroadcastMessageEvent = "BroadcastMessage";
 
         private FFXIVRepository repository;
+        private CombatantMemoryManager combatantMemory;
 
         // Event Source
 
@@ -60,8 +61,9 @@ namespace RainbowMage.OverlayPlugin.EventSources
 
         public MiniParseEventSource(TinyIoCContainer container) : base(container)
         {
-            this.Name = "MiniParse";
-            this.repository = container.Resolve<FFXIVRepository>();
+            Name = "MiniParse";
+            repository = container.Resolve<FFXIVRepository>();
+            combatantMemory = container.Resolve<CombatantMemoryManager>();
 
             // FileChanged isn't actually raised by this event source. That event is generated in MiniParseOverlay directly.
             RegisterEventTypes(new List<string> {
@@ -249,42 +251,7 @@ namespace RainbowMage.OverlayPlugin.EventSources
         private void InitFFXIVIntegration()
         {
             repository.RegisterPartyChangeDelegate((partyList, partySize) => DispatchPartyChangeEvent(partyList, partySize));
-            repository.RegisterProcessChangedHandler((p) => CheckMemory());
-            CheckMemory();
             ffxivPluginPresent = true;
-        }
-
-        MemoryProcessors.EnmityMemory memory = null;
-        List<MemoryProcessors.EnmityMemory> memoryCandidates = null;
-        private void CheckMemory()
-        {
-            if (memory == null || (memory != null && !memory.IsValid()))
-            {
-                if (memoryCandidates == null)
-                {
-                    memoryCandidates = new List<MemoryProcessors.EnmityMemory>();
-                    // For CN/KR, try the lang-specific candidate first, then fall back to intl
-                    if (repository.GetLanguage() == FFXIV_ACT_Plugin.Common.Language.Chinese)
-                    {
-                        memoryCandidates.Add(new MemoryProcessors.EnmityMemory61(container));
-                    }
-                    else if (repository.GetLanguage() == FFXIV_ACT_Plugin.Common.Language.Korean)
-                    {
-                        memoryCandidates.Add(new MemoryProcessors.EnmityMemory60(container));
-                    }
-                    memoryCandidates.Add(new MemoryProcessors.EnmityMemory62(container));
-                }
-
-                foreach (var candidate in memoryCandidates)
-                {
-                    if (candidate.IsValid())
-                    {
-                        memory = candidate;
-                        memoryCandidates = null;
-                        break;
-                    }
-                }
-            }
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -293,11 +260,9 @@ namespace RainbowMage.OverlayPlugin.EventSources
             List<Dictionary<string, object>> filteredCombatants = new List<Dictionary<string, object>>();
             var pluginCombatants = repository.GetCombatants();
 
-            CheckMemory();
-
-            if (memory != null && memory.IsValid())
+            if (combatantMemory.IsValid())
             {
-                var memCombatants = memory.GetCombatantList();
+                var memCombatants = combatantMemory.GetCombatantList();
                 foreach (var combatant in memCombatants)
                 {
                     if (combatant.ID == 0)
@@ -342,7 +307,7 @@ namespace RainbowMage.OverlayPlugin.EventSources
                         var jObjCombatant = JObject.FromObject(combatant).ToObject<Dictionary<string, object>>();
                         var ID = Convert.ToUInt32(jObjCombatant["ID"]);
                         
-                        var pluginCombatant = pluginCombatants.FirstOrDefault((Combatant c) => c.ID == ID);
+                        var pluginCombatant = pluginCombatants.FirstOrDefault((PluginCombatant c) => c.ID == ID);
                         if (pluginCombatant != null)
                         {
                             jObjCombatant["PartyType"] = GetPartyType(pluginCombatant);
@@ -494,7 +459,7 @@ namespace RainbowMage.OverlayPlugin.EventSources
             public bool inParty;
         }
 
-        private int GetPartyType(Combatant combatant)
+        private int GetPartyType(PluginCombatant combatant)
         {
             // The PartyTypeEnum was renamed in 2.6.0.0 to work around that, we use reflection and cast the result to int.
             return (int) combatant.GetType().GetMethod("get_PartyType").Invoke(combatant, new object[] {});
@@ -542,7 +507,7 @@ namespace RainbowMage.OverlayPlugin.EventSources
             // * make callers handle this via calling GetCombatants explicitly
 
             // Build a lookup table of currently known combatants
-            var lookupTable = new Dictionary<uint, Combatant>();
+            var lookupTable = new Dictionary<uint, PluginCombatant>();
             foreach (var c in combatants)
             {
                 if (GetPartyType(c) != 0 /* None */)
@@ -560,7 +525,7 @@ namespace RainbowMage.OverlayPlugin.EventSources
 
                 foreach (var id in partyList)
                 {
-                    Combatant c;
+                    PluginCombatant c;
                     if (lookupTable.TryGetValue(id, out c))
                     {
                         result.Add(new PartyMember

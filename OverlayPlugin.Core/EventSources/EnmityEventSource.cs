@@ -2,24 +2,30 @@ using Advanced_Combat_Tracker;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+#if TRACE
 using System.Diagnostics;
+#endif
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using RainbowMage.OverlayPlugin.MemoryProcessors;
-using System.IO;
-using System.Runtime.CompilerServices;
+using RainbowMage.OverlayPlugin.MemoryProcessors.Combatant;
+using RainbowMage.OverlayPlugin.MemoryProcessors.InCombat;
+using RainbowMage.OverlayPlugin.MemoryProcessors.Enmity;
+using RainbowMage.OverlayPlugin.MemoryProcessors.Aggro;
+using RainbowMage.OverlayPlugin.MemoryProcessors.EnmityHud;
+using RainbowMage.OverlayPlugin.MemoryProcessors.Target;
 
 namespace RainbowMage.OverlayPlugin.EventSources
 {
     public class EnmityEventSource : EventSourceBase
     {
-        private EnmityMemory memory;
-        private List<EnmityMemory> memoryCandidates;
-        private bool memoryValid = false;
-
-        const int MEMORY_SCAN_INTERVAL = 3000;
+        private InCombatMemoryManager inCombatMemory;
+        private CombatantMemoryManager combatantMemory;
+        private TargetMemoryManager targetMemory;
+        private EnmityMemoryManager enmityMemory;
+        private AggroMemoryManager aggroMemory;
+        private EnmityHudMemoryManager enmityHudMemory;
 
         // General information about the target, focus target, hover target.  Also, enmity entries for main target.
         private const string EnmityTargetDataEvent = "EnmityTargetData";
@@ -49,36 +55,17 @@ namespace RainbowMage.OverlayPlugin.EventSources
 
         public EnmityEventSource(TinyIoCContainer container) : base(container)
         {
-            var repository = container.Resolve<FFXIVRepository>();
-
-            try
-            {
-                PickMemoryCandidates(repository);
-            } catch (FileNotFoundException)
-            {
-                // The FFXIV plugin isn't present.
-            }
+            inCombatMemory = container.Resolve<InCombatMemoryManager>();
+            combatantMemory = container.Resolve<CombatantMemoryManager>();
+            targetMemory = container.Resolve<TargetMemoryManager>();
+            enmityMemory = container.Resolve<EnmityMemoryManager>();
+            aggroMemory = container.Resolve<AggroMemoryManager>();
+            enmityHudMemory = container.Resolve<EnmityHudMemoryManager>();
 
             RegisterEventTypes(new List<string> {
                 EnmityTargetDataEvent, EnmityAggroListEvent, TargetableEnemiesEvent
             });
             RegisterCachedEventType(InCombatEvent);
-        }
-
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        private void PickMemoryCandidates(FFXIVRepository repository)
-        {
-            // For CN/KR, try the lang-specific candidate first, then fall back to intl
-            memoryCandidates = new List<EnmityMemory>();
-            if (repository.GetLanguage() == FFXIV_ACT_Plugin.Common.Language.Chinese)
-            {
-                memoryCandidates.Add(new EnmityMemory61(container));
-            }
-            else if (repository.GetLanguage() == FFXIV_ACT_Plugin.Common.Language.Korean)
-            {
-                memoryCandidates.Add(new EnmityMemory60(container));
-            }
-            memoryCandidates.Add(new EnmityMemory62(container));
         }
 
         public override Control CreateConfigControl()
@@ -88,68 +75,25 @@ namespace RainbowMage.OverlayPlugin.EventSources
 
         public override void LoadConfig(IPluginConfig cfg)
         {
-            this.Config = container.Resolve<BuiltinEventConfig>();
+            Config = container.Resolve<BuiltinEventConfig>();
 
-            this.Config.EnmityIntervalChanged += (o, e) =>
+            Config.EnmityIntervalChanged += (o, e) =>
             {
-                if (memory != null)
-                    timer.Change(0, this.Config.EnmityIntervalMs);
+                timer.Change(0, Config.EnmityIntervalMs);
             };
-        }
-
-        public override void Start()
-        {
-            // If we don't have anything to scan for, don't start.
-            if (memoryCandidates == null) return;
-
-            memoryValid = false;
-            timer.Change(0, MEMORY_SCAN_INTERVAL);
         }
 
         public override void SaveConfig(IPluginConfig config)
         {
         }
 
-        protected override void Update()
+        private void UpdateInCombat()
         {
-            try
+            if (inCombatMemory.IsValid())
             {
-#if TRACE
-                var stopwatch = new Stopwatch();
-                stopwatch.Start();
-#endif
-
-                if (memory == null)
-                {
-                    foreach (var candidate in memoryCandidates)
-                    {
-                        if (candidate.IsValid())
-                        {
-                            memory = candidate;
-                            memoryCandidates = null;
-                            break;
-                        }
-                    }
-                }
-
-                if (memory == null || !memory.IsValid())
-                {
-                    if (memoryValid)
-                    {
-                        timer.Change(MEMORY_SCAN_INTERVAL, MEMORY_SCAN_INTERVAL);
-                        memoryValid = false;
-                    }
-
-                    return;
-                } else if (!memoryValid)
-                {
-                    // Increase the update interval now that we found our memory
-                    timer.Change(this.Config.EnmityIntervalMs, this.Config.EnmityIntervalMs);
-                    memoryValid = true;
-                }
 
                 // Handle optional "end encounter of combat" logic.
-                bool inGameCombat = memory.GetInCombat();
+                bool inGameCombat = inCombatMemory.GetInCombat();
                 if (inGameCombat != lastInGameCombat)
                 {
                     logger.Log(LogLevel.Debug, inGameCombat ? "Entered combat" : "Left combat");
@@ -190,33 +134,49 @@ namespace RainbowMage.OverlayPlugin.EventSources
                             sentCombatData = new InCombatDataObject();
                         sentCombatData.inACTCombat = inACTCombat;
                         sentCombatData.inGameCombat = inGameCombat;
-                        this.DispatchAndCacheEvent(JObject.FromObject(sentCombatData));
+                        DispatchAndCacheEvent(JObject.FromObject(sentCombatData));
                     }
                 }
+            }
+        }
 
-                bool targetData = HasSubscriber(EnmityTargetDataEvent);
-                bool aggroList = HasSubscriber(EnmityAggroListEvent);
-                bool targetableEnemies = HasSubscriber(TargetableEnemiesEvent);
-                if (!targetData && !aggroList && !targetableEnemies)
-                    return;
+        private void UpdateEnmity()
+        {
+            bool targetData = HasSubscriber(EnmityTargetDataEvent);
+            bool aggroList = HasSubscriber(EnmityAggroListEvent);
+            bool targetableEnemies = HasSubscriber(TargetableEnemiesEvent);
+            if (!targetData && !aggroList && !targetableEnemies)
+                return;
 
-                var combatants = memory.GetCombatantList();
+            var combatants = combatantMemory.GetCombatantList();
 
-                combatants.RemoveAll((c) => c.Type != ObjectType.PC && c.Type != ObjectType.Monster);
+            combatants.RemoveAll((c) => c.Type != ObjectType.PC && c.Type != ObjectType.Monster);
 
-                if (targetData)
-                {
-                    // See CreateTargetData() below
-                    this.DispatchEvent(CreateTargetData(combatants));
-                }
-                if (aggroList)
-                {
-                    this.DispatchEvent(CreateAggroList(combatants));
-                }
-                if (targetableEnemies)
-                {
-                    this.DispatchEvent(CreateTargetableEnemyList(combatants));
-                }
+            if (targetData)
+            {
+                // See CreateTargetData() below
+                DispatchEvent(CreateTargetData(combatants));
+            }
+            if (aggroList)
+            {
+                DispatchEvent(CreateAggroList(combatants));
+            }
+            if (targetableEnemies)
+            {
+                DispatchEvent(CreateTargetableEnemyList(combatants));
+            }
+        }
+
+        protected override void Update()
+        {
+            try
+            {
+#if TRACE
+                var stopwatch = new Stopwatch();
+                stopwatch.Start();
+#endif
+                UpdateInCombat();
+                UpdateEnmity();
 #if TRACE
                 Log(LogLevel.Trace, "UpdateEnmity: {0}ms", stopwatch.ElapsedMilliseconds);
 #endif
@@ -258,8 +218,8 @@ namespace RainbowMage.OverlayPlugin.EventSources
             EnmityTargetDataObject enmity = new EnmityTargetDataObject();
             try
             {
-                var mychar = memory.GetSelfCombatant();
-                enmity.Target = memory.GetTargetCombatant();
+                var mychar = combatantMemory.GetSelfCombatant();
+                enmity.Target = targetMemory.GetTargetCombatant();
                 if (enmity.Target != null)
                 {
                     if (enmity.Target.TargetID > 0)
@@ -271,12 +231,12 @@ namespace RainbowMage.OverlayPlugin.EventSources
 
                     if (enmity.Target.Type == ObjectType.Monster)
                     {
-                        enmity.Entries = memory.GetEnmityEntryList(combatants);
+                        enmity.Entries = enmityMemory.GetEnmityEntryList(combatants);
                     }
                 }
 
-                enmity.Focus = memory.GetFocusCombatant();
-                enmity.Hover = memory.GetHoverCombatant();
+                enmity.Focus = targetMemory.GetFocusCombatant();
+                enmity.Hover = targetMemory.GetHoverCombatant();
 
                 if (mychar != null)
                 {
@@ -309,8 +269,8 @@ namespace RainbowMage.OverlayPlugin.EventSources
             EnmityAggroListObject enmity = new EnmityAggroListObject();
             try
             {
-                enmity.AggroList = memory.GetAggroList(combatants);
-                enmity.EnmityHudList = memory.GetEnmityHudEntries();
+                enmity.AggroList = aggroMemory.GetAggroList(combatants);
+                enmity.EnmityHudList = enmityHudMemory.GetEnmityHudEntries();
             }
             catch (Exception ex)
             {
@@ -324,13 +284,35 @@ namespace RainbowMage.OverlayPlugin.EventSources
             TargetableEnemiesObject enemies = new TargetableEnemiesObject();
             try
             {
-                enemies.TargetableEnemyList = memory.GetTargetableEnemyList(combatants);
+                enemies.TargetableEnemyList = GetTargetableEnemyList(combatants);
             }
             catch (Exception ex)
             {
                 this.logger.Log(LogLevel.Error, "CreateTargetableEnemyList: {0}", ex);
             }
             return JObject.FromObject(enemies);
+        }
+
+        public List<TargetableEnemyEntry> GetTargetableEnemyList(List<Combatant> combatantList)
+        {
+            var enemyList = new List<TargetableEnemyEntry>();
+            for (int i = 0; i != combatantList.Count; ++i)
+            {
+                var combatant = combatantList[i];
+                bool isHostile = (combatant.Type == ObjectType.Monster) && (combatant.MonsterType == MonsterType.Hostile);
+                if (!isHostile || !combatant.IsTargetable) continue;
+                var entry = new TargetableEnemyEntry
+                {
+                    ID = combatant.ID,
+                    Name = combatant.Name,
+                    CurrentHP = combatant.CurrentHP,
+                    MaxHP = combatant.CurrentHP,
+                    IsEngaged = (combatant.AggressionStatus >= AggressionStatus.EngagedPassive),
+                    EffectiveDistance = combatant.RawEffectiveDistance
+                };
+                enemyList.Add(entry);
+            }
+            return enemyList;
         }
     }
 
@@ -342,5 +324,16 @@ namespace RainbowMage.OverlayPlugin.EventSources
         {
             InCombat = status;
         }
+    }
+
+    [Serializable]
+    public class TargetableEnemyEntry
+    {
+        public uint ID;
+        public string Name;
+        public int CurrentHP;
+        public int MaxHP;
+        public bool IsEngaged;
+        public byte EffectiveDistance;
     }
 }
