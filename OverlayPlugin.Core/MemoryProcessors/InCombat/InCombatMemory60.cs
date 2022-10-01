@@ -3,7 +3,9 @@ using System.Collections.Generic;
 
 namespace RainbowMage.OverlayPlugin.MemoryProcessors.InCombat
 {
-    class InCombatMemory60 : InCombatMemory
+    interface IInCombatMemory60 : IInCombatMemory {}
+
+    class InCombatMemory60 : InCombatMemory, IInCombatMemory60
     {
         private const string inCombatSignature = "84c07425450fb6c7488d0d";
         private const int inCombatSignatureBaseOffset = 0;

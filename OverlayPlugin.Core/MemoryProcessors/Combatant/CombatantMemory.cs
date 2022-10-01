@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
@@ -7,7 +8,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
     public abstract class CombatantMemory : ICombatantMemory {
         private FFXIVMemory memory;
         private ILogger logger;
-        private uint loggedScanErrors = 0;
 
         private IntPtr charmapAddress = IntPtr.Zero;
 
@@ -26,15 +26,16 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
             this.combatantSize = combatantSize;
             this.effectSize = effectSize;
             this.numMemoryCombatants = numMemoryCombatants;
-            memory = new FFXIVMemory(container);
-            memory.OnProcessChange += ResetPointers;
             logger = container.Resolve<ILogger>();
-            GetPointerAddress();
+            memory = container.Resolve<FFXIVMemory>();
+            memory.RegisterOnProcessChangeHandler(ResetPointers);
         }
 
-        private void ResetPointers(object sender, EventArgs _)
+        private void ResetPointers(object sender, Process p)
         {
             charmapAddress = IntPtr.Zero;
+            if (p != null)
+                GetPointerAddress();
         }
 
         private bool HasValidPointers()
@@ -48,9 +49,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
         {
             if (!memory.IsValid())
                 return false;
-
-            if (!HasValidPointers())
-                GetPointerAddress();
 
             if (!HasValidPointers())
                 return false;
@@ -87,23 +85,13 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
                 logger.Log(LogLevel.Debug, "MyCharacter: '{0}' (0x{1:X})", c.Name, c.ID);
             }
 
-            if (!success)
+            if (success)
             {
-                if (loggedScanErrors < 10)
-                {
-                    logger.Log(LogLevel.Error, $"Failed to find combatant memory via {GetType().Name}: {string.Join(",", fail)}.");
-                    loggedScanErrors++;
-
-                    if (loggedScanErrors == 10)
-                    {
-                        logger.Log(LogLevel.Error, "Further combatant memory errors won't be logged.");
-                    }
-                }
+                logger.Log(LogLevel.Info, $"Found combatant memory via {GetType().Name}.");
             }
             else
             {
-                logger.Log(LogLevel.Info, $"Found combatant memory via {GetType().Name}.");
-                loggedScanErrors = 0;
+                logger.Log(LogLevel.Error, $"Failed to find combatant memory via {GetType().Name}: {string.Join(",", fail)}.");
             }
 
             return success;

@@ -3,7 +3,9 @@ using System.Runtime.InteropServices;
 
 namespace RainbowMage.OverlayPlugin.MemoryProcessors.EnmityHud
 {
-    class EnmityHudMemory60 : EnmityHudMemory
+    interface IEnmityHudMemory60 : IEnmityHudMemory {}
+
+    class EnmityHudMemory60 : EnmityHudMemory, IEnmityHudMemory60
     {
         private const string enmityHudSignature = "48895C246048897C2470488B3D";
         private static readonly int[] enmityHudPointerPath = new int[] { 0x30, 0x58, 0x98, 0x20 };

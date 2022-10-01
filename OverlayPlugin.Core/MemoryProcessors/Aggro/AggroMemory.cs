@@ -1,6 +1,9 @@
-﻿using RainbowMage.OverlayPlugin.MemoryProcessors.Enmity;
+﻿using RainbowMage.OverlayPlugin.MemoryProcessors.Combatant;
+using RainbowMage.OverlayPlugin.MemoryProcessors.Enmity;
+using RainbowMage.OverlayPlugin.MemoryProcessors.Target;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace RainbowMage.OverlayPlugin.MemoryProcessors.Aggro
@@ -8,9 +11,8 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Aggro
     public abstract class AggroMemory : IAggroMemory {
         private FFXIVMemory memory;
         private ILogger logger;
-        private uint loggedScanErrors = 0;
-        private MemoryProcessors.Combatant.CombatantMemoryManager combatantMemory;
-        private Target.TargetMemoryManager targetMemory;
+        private ICombatantMemory combatantMemory;
+        private ITargetMemory targetMemory;
 
         private IntPtr aggroAddress = IntPtr.Zero;
 
@@ -21,17 +23,18 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Aggro
         {
             this.aggroSignature = aggroSignature;
             this.aggroSignatureOffset = aggroSignatureOffset;
-            memory = new FFXIVMemory(container);
-            memory.OnProcessChange += ResetPointers;
             logger = container.Resolve<ILogger>();
-            combatantMemory = container.Resolve<MemoryProcessors.Combatant.CombatantMemoryManager>();
-            targetMemory = container.Resolve<Target.TargetMemoryManager>();
-            GetPointerAddress();
+            memory = container.Resolve<FFXIVMemory>();
+            memory.RegisterOnProcessChangeHandler(ResetPointers);
+            combatantMemory = container.Resolve<ICombatantMemory>();
+            targetMemory = container.Resolve<ITargetMemory>();
         }
 
-        private void ResetPointers(object sender, EventArgs _)
+        private void ResetPointers(object sender, Process p)
         {
             aggroAddress = IntPtr.Zero;
+            if (p != null)
+                GetPointerAddress();
         }
 
         private bool HasValidPointers()
@@ -45,9 +48,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Aggro
         {
             if (!memory.IsValid())
                 return false;
-
-            if (!HasValidPointers())
-                GetPointerAddress();
 
             if (!HasValidPointers())
                 return false;
@@ -78,23 +78,13 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Aggro
 
             logger.Log(LogLevel.Debug, "aggroAddress: 0x{0:X}", aggroAddress.ToInt64());
 
-            if (!success)
+            if (success)
             {
-                if (loggedScanErrors < 10)
-                {
-                    logger.Log(LogLevel.Error, "Failed to find aggro memory for 6.2: {0}.", String.Join(",", fail));
-                    loggedScanErrors++;
-
-                    if (loggedScanErrors == 10)
-                    {
-                        logger.Log(LogLevel.Error, "Further aggro errors won't be logged.");
-                    }
-                }
+                logger.Log(LogLevel.Info, $"Found aggro memory via {GetType().Name}.");
             }
             else
             {
-                logger.Log(LogLevel.Info, "Found aggro memory for 6.2.");
-                loggedScanErrors = 0;
+                logger.Log(LogLevel.Error, $"Failed to find aggro memory via {GetType().Name}: {string.Join(",", fail)}.");
             }
 
             return success;

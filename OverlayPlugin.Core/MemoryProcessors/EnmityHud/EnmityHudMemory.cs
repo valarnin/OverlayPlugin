@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace RainbowMage.OverlayPlugin.MemoryProcessors.EnmityHud
 {
     public abstract class EnmityHudMemory : IEnmityHudMemory {
         private FFXIVMemory memory;
         private ILogger logger;
-        private uint loggedScanErrors = 0;
-        private MemoryProcessors.Combatant.CombatantMemoryManager combatantMemory;
 
         private IntPtr enmityHudAddress = IntPtr.Zero;
         private IntPtr enmityHudDynamicAddress = IntPtr.Zero;
@@ -27,16 +26,16 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.EnmityHud
             this.enmityHudCountOffset = enmityHudCountOffset;
             this.enmityHudEntryOffset = enmityHudEntryOffset;
             this.enmityHudEntrySize = enmityHudEntrySize;
-            memory = new FFXIVMemory(container);
-            memory.OnProcessChange += ResetPointers;
             logger = container.Resolve<ILogger>();
-            combatantMemory = container.Resolve<MemoryProcessors.Combatant.CombatantMemoryManager>();
-            GetPointerAddress();
+            memory = container.Resolve<FFXIVMemory>();
+            memory.RegisterOnProcessChangeHandler(ResetPointers);
         }
 
-        private void ResetPointers(object sender, EventArgs _)
+        private void ResetPointers(object sender, Process p)
         {
             enmityHudAddress = IntPtr.Zero;
+            if (p != null)
+                GetPointerAddress();
         }
 
         private bool HasValidPointers()
@@ -50,9 +49,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.EnmityHud
         {
             if (!memory.IsValid())
                 return false;
-
-            if (!HasValidPointers())
-                GetPointerAddress();
 
             if (!HasValidPointers())
                 return false;
@@ -89,23 +85,13 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.EnmityHud
 
             logger.Log(LogLevel.Debug, "enmityHudAddress: 0x{0:X}", enmityHudAddress.ToInt64());
 
-            if (!success)
+            if (success)
             {
-                if (loggedScanErrors < 10)
-                {
-                    logger.Log(LogLevel.Error, $"Failed to find enmity HUD memory via {GetType().Name}: {string.Join(", ", fail)}.");
-                    loggedScanErrors++;
-
-                    if (loggedScanErrors == 10)
-                    {
-                        logger.Log(LogLevel.Error, "Further enmity HUD memory errors won't be logged.");
-                    }
-                }
+                logger.Log(LogLevel.Info, $"Found enmity HUD memory via {GetType().Name}.");
             }
             else
             {
-                logger.Log(LogLevel.Info, $"Found enmity HUD memory via {GetType().Name}.");
-                loggedScanErrors = 0;
+                logger.Log(LogLevel.Error, $"Failed to find enmity HUD memory via {GetType().Name}: {string.Join(", ", fail)}.");
             }
 
             return success;
@@ -113,10 +99,12 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.EnmityHud
 
         private bool GetDynamicPointerAddress()
         {
-            var entries = new List<EnmityHudEntry>();
             if (enmityHudAddress == IntPtr.Zero) return false;
 
-            // Resolve Dynamic Pointers
+            // Resolve Dynamic Pointers.
+            // The static sigscan address fetched in GetPointerAddress is statically allocated.
+            // However, the HUD entry is dynamically allocated every time the HUD is refreshed.
+            // Walk down the pointer tree to the actual address we want, determined by enmityHudPointerPath.
             if (DateTimeOffset.UtcNow - lastDateTimeDynamicAddressChecked > TimeSpan.FromSeconds(30))
             {
                 lastDateTimeDynamicAddressChecked = DateTimeOffset.UtcNow;

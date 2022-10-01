@@ -5,36 +5,27 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Enmity
     public interface IEnmityMemory
     {
         List<EnmityEntry> GetEnmityEntryList(List<Combatant.Combatant> combatantList);
+
+        bool IsValid();
     }
 
     public class EnmityMemoryManager : IEnmityMemory
     {
         private readonly TinyIoCContainer container;
         private readonly FFXIVRepository repository;
-        private EnmityMemory memory = null;
+        private IEnmityMemory memory = null;
 
         public EnmityMemoryManager(TinyIoCContainer container)
         {
             this.container = container;
-            container.Register(new EnmityMemory60(container));
-            container.Register(new EnmityMemory61(container));
-            container.Register(new EnmityMemory62(container));
+            container.Register<IEnmityMemory60, EnmityMemory60>();
             repository = container.Resolve<FFXIVRepository>();
         }
 
         private void FindMemory()
         {
-            List<EnmityMemory> candidates = new List<EnmityMemory>();
-            // For CN/KR, try the lang-specific candidate first, then fall back to intl
-            if (repository.GetLanguage() == FFXIV_ACT_Plugin.Common.Language.Chinese)
-            {
-                candidates.Add(container.Resolve<EnmityMemory61>());
-            }
-            else if (repository.GetLanguage() == FFXIV_ACT_Plugin.Common.Language.Korean)
-            {
-                candidates.Add(container.Resolve<EnmityMemory60>());
-            }
-            candidates.Add(container.Resolve<EnmityMemory62>());
+            List<IEnmityMemory> candidates = new List<IEnmityMemory>();
+            candidates.Add(container.Resolve<IEnmityMemory60>());
 
             foreach (var c in candidates)
             {

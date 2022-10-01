@@ -4,7 +4,9 @@ using System.Runtime.InteropServices;
 
 namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
 {
-    class CombatantMemory60 : CombatantMemory
+    interface ICombatantMemory60 : ICombatantMemory {}
+
+    class CombatantMemory60 : CombatantMemory, ICombatantMemory60
     {
         private const string charmapSignature = "48c1ea0381faa7010000????8bc2488d0d";
 

@@ -53,7 +53,7 @@ namespace RainbowMage.OverlayPlugin.EventSources
         private const string BroadcastMessageEvent = "BroadcastMessage";
 
         private FFXIVRepository repository;
-        private CombatantMemoryManager combatantMemory;
+        private ICombatantMemory combatantMemory;
 
         // Event Source
 
@@ -63,7 +63,7 @@ namespace RainbowMage.OverlayPlugin.EventSources
         {
             Name = "MiniParse";
             repository = container.Resolve<FFXIVRepository>();
-            combatantMemory = container.Resolve<CombatantMemoryManager>();
+            combatantMemory = container.Resolve<ICombatantMemory>();
 
             // FileChanged isn't actually raised by this event source. That event is generated in MiniParseOverlay directly.
             RegisterEventTypes(new List<string> {

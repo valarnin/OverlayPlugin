@@ -15,30 +15,30 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
     {
         private readonly TinyIoCContainer container;
         private readonly FFXIVRepository repository;
-        private CombatantMemory memory = null;
+        private ICombatantMemory memory = null;
 
         public CombatantMemoryManager(TinyIoCContainer container)
         {
             this.container = container;
-            container.Register(new CombatantMemory60(container));
-            container.Register(new CombatantMemory61(container));
-            container.Register(new CombatantMemory62(container));
+            container.Register<ICombatantMemory60, CombatantMemory60>();
+            container.Register<ICombatantMemory61, CombatantMemory61>();
+            container.Register<ICombatantMemory62, CombatantMemory62>();
             repository = container.Resolve<FFXIVRepository>();
         }
 
         private void FindMemory()
         {
-            List<CombatantMemory> candidates = new List<CombatantMemory>();
+            List<ICombatantMemory> candidates = new List<ICombatantMemory>();
             // For CN/KR, try the lang-specific candidate first, then fall back to intl
             if (repository.GetLanguage() == FFXIV_ACT_Plugin.Common.Language.Chinese)
             {
-                candidates.Add(container.Resolve<CombatantMemory61>());
+                candidates.Add(container.Resolve<ICombatantMemory61>());
             }
             else if (repository.GetLanguage() == FFXIV_ACT_Plugin.Common.Language.Korean)
             {
-                candidates.Add(container.Resolve<CombatantMemory60>());
+                candidates.Add(container.Resolve<ICombatantMemory60>());
             }
-            candidates.Add(container.Resolve<CombatantMemory62>());
+            candidates.Add(container.Resolve<ICombatantMemory62>());
 
             foreach (var c in candidates)
             {

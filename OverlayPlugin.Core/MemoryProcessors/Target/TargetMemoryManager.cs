@@ -9,36 +9,27 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Target
         Combatant.Combatant GetFocusCombatant();
 
         Combatant.Combatant GetHoverCombatant();
+
+        bool IsValid();
     }
 
     class TargetMemoryManager : ITargetMemory
     {
         private readonly TinyIoCContainer container;
         private readonly FFXIVRepository repository;
-        private TargetMemory memory = null;
+        private ITargetMemory memory = null;
 
         public TargetMemoryManager(TinyIoCContainer container)
         {
             this.container = container;
-            container.Register(new TargetMemory60(container));
-            container.Register(new TargetMemory61(container));
-            container.Register(new TargetMemory62(container));
+            container.Register<ITargetMemory60, TargetMemory60>();
             repository = container.Resolve<FFXIVRepository>();
         }
 
         private void FindMemory()
         {
-            List<TargetMemory> candidates = new List<TargetMemory>();
-            // For CN/KR, try the lang-specific candidate first, then fall back to intl
-            if (repository.GetLanguage() == FFXIV_ACT_Plugin.Common.Language.Chinese)
-            {
-                candidates.Add(container.Resolve<TargetMemory61>());
-            }
-            else if (repository.GetLanguage() == FFXIV_ACT_Plugin.Common.Language.Korean)
-            {
-                candidates.Add(container.Resolve<TargetMemory60>());
-            }
-            candidates.Add(container.Resolve<TargetMemory62>());
+            List<ITargetMemory> candidates = new List<ITargetMemory>();
+            candidates.Add(container.Resolve<ITargetMemory60>());
 
             foreach (var c in candidates)
             {

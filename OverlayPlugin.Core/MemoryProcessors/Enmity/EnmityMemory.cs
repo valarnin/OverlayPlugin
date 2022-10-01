@@ -1,6 +1,7 @@
 ﻿using RainbowMage.OverlayPlugin.MemoryProcessors.Combatant;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace RainbowMage.OverlayPlugin.MemoryProcessors.Enmity
@@ -8,8 +9,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Enmity
     public abstract class EnmityMemory : IEnmityMemory {
         private FFXIVMemory memory;
         private ILogger logger;
-        private uint loggedScanErrors = 0;
-        private CombatantMemoryManager combatantMemory;
+        private ICombatantMemory combatantMemory;
 
         private IntPtr enmityAddress = IntPtr.Zero;
 
@@ -20,16 +20,17 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Enmity
         {
             this.enmitySignature = enmitySignature;
             this.enmitySignatureOffset = enmitySignatureOffset;
-            memory = new FFXIVMemory(container);
-            memory.OnProcessChange += ResetPointers;
             logger = container.Resolve<ILogger>();
-            combatantMemory = container.Resolve<MemoryProcessors.Combatant.CombatantMemoryManager>();
-            GetPointerAddress();
+            memory = container.Resolve<FFXIVMemory>();
+            memory.RegisterOnProcessChangeHandler(ResetPointers);
+            combatantMemory = container.Resolve<ICombatantMemory>();
         }
 
-        private void ResetPointers(object sender, EventArgs _)
+        private void ResetPointers(object sender, Process p)
         {
             enmityAddress = IntPtr.Zero;
+            if (p != null)
+                GetPointerAddress();
         }
 
         private bool HasValidPointers()
@@ -43,9 +44,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Enmity
         {
             if (!memory.IsValid())
                 return false;
-
-            if (!HasValidPointers())
-                GetPointerAddress();
 
             if (!HasValidPointers())
                 return false;
@@ -76,23 +74,13 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Enmity
 
             logger.Log(LogLevel.Debug, "enmityAddress: 0x{0:X}", enmityAddress.ToInt64());
 
-            if (!success)
+            if (success)
             {
-                if (loggedScanErrors < 10)
-                {
-                    logger.Log(LogLevel.Error, $"Failed to find enmity memory via {GetType().Name}: {string.Join(", ", fail)}.");
-                    loggedScanErrors++;
-
-                    if (loggedScanErrors == 10)
-                    {
-                        logger.Log(LogLevel.Error, "Further enmity memory errors won't be logged.");
-                    }
-                }
+                logger.Log(LogLevel.Info, $"Found enmity memory via {GetType().Name}.");
             }
             else
             {
-                logger.Log(LogLevel.Info, $"Found enmity memory via {GetType().Name}.");
-                loggedScanErrors = 0;
+                logger.Log(LogLevel.Error, $"Failed to find enmity memory via {GetType().Name}: {string.Join(", ", fail)}.");
             }
 
             return success;

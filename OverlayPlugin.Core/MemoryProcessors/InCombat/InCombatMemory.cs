@@ -1,13 +1,12 @@
-﻿using RainbowMage.OverlayPlugin.MemoryProcessors.Combatant;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace RainbowMage.OverlayPlugin.MemoryProcessors.InCombat
 {
     public abstract class InCombatMemory {
         protected FFXIVMemory memory;
         protected ILogger logger;
-        private uint loggedScanErrors = 0;
 
         protected IntPtr inCombatAddress = IntPtr.Zero;
 
@@ -21,15 +20,16 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.InCombat
             this.inCombatSignature = inCombatSignature;
             this.inCombatSignatureOffset = inCombatSignatureOffset;
             this.inCombatRIPOffset = inCombatRIPOffset;
-            memory = new FFXIVMemory(container);
-            memory.OnProcessChange += ResetPointers;
             logger = container.Resolve<ILogger>();
-            GetPointerAddress();
+            memory = container.Resolve<FFXIVMemory>();
+            memory.RegisterOnProcessChangeHandler(ResetPointers);
         }
 
-        private void ResetPointers(object sender, EventArgs _)
+        private void ResetPointers(object sender, Process p)
         {
             inCombatAddress = IntPtr.Zero;
+            if (p != null)
+                GetPointerAddress();
         }
 
         private bool HasValidPointers()
@@ -43,9 +43,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.InCombat
         {
             if (!memory.IsValid())
                 return false;
-
-            if (!HasValidPointers())
-                GetPointerAddress();
 
             if (!HasValidPointers())
                 return false;
@@ -78,23 +75,13 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.InCombat
 
             logger.Log(LogLevel.Debug, "inCombatAddress: 0x{0:X}", inCombatAddress.ToInt64());
 
-            if (!success)
+            if (success)
             {
-                if (loggedScanErrors < 10)
-                {
-                    logger.Log(LogLevel.Error, $"Failed to find in combat memory via {GetType().Name}: {string.Join(", ", fail)}.");
-                    loggedScanErrors++;
-
-                    if (loggedScanErrors == 10)
-                    {
-                        logger.Log(LogLevel.Error, "Further in combat memory errors won't be logged.");
-                    }
-                }
+                logger.Log(LogLevel.Info, $"Found in combat memory via {GetType().Name}.");
             }
             else
             {
-                logger.Log(LogLevel.Info, $"Found in combat memory via {GetType().Name}.");
-                loggedScanErrors = 0;
+                logger.Log(LogLevel.Error, $"Failed to find in combat memory via {GetType().Name}: {string.Join(", ", fail)}.");
             }
 
             return success;
@@ -102,7 +89,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.InCombat
 
         public bool GetInCombat()
         {
-            if (inCombatAddress == IntPtr.Zero)
+            if (!IsValid())
                 return false;
             byte[] bytes = memory.Read8(inCombatAddress, 1);
             return bytes[0] != 0;

@@ -250,15 +250,17 @@ namespace RainbowMage.OverlayPlugin
                             _container.Register(new FFXIVCustomLogLines(_container));
                             _container.Register(new OverlayPluginLogLines(_container));
 
-                            // Initialize FFXIV memory reading subcomponents. Order here is important.
+                            // Register FFXIV memory reading subcomponents.
                             // Must be done before loading addons.
                             _container.Register(new FFXIVMemory(_container));
-                            _container.Register(new CombatantMemoryManager(_container));
-                            _container.Register(new TargetMemoryManager(_container));
-                            _container.Register(new AggroMemoryManager(_container));
-                            _container.Register(new EnmityMemoryManager(_container));
-                            _container.Register(new EnmityHudMemoryManager(_container));
-                            _container.Register(new InCombatMemoryManager(_container));
+
+                            // These are registered to be lazy-loaded. Use interface to force TinyIoC to use singleton pattern.
+                            _container.Register<ICombatantMemory, CombatantMemoryManager>();
+                            _container.Register<ITargetMemory, TargetMemoryManager>();
+                            _container.Register<IAggroMemory, AggroMemoryManager>();
+                            _container.Register<IEnmityMemory, EnmityMemoryManager>();
+                            _container.Register<IEnmityHudMemory, EnmityHudMemoryManager>();
+                            _container.Register<IInCombatMemory, InCombatMemoryManager>();
 
                             // This timer runs on the UI thread (it has to since we create UI controls) but LoadAddons()
                             // can block for some time. We run it on the background thread to avoid blocking the UI.

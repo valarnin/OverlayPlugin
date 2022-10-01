@@ -1,14 +1,14 @@
 ﻿using RainbowMage.OverlayPlugin.MemoryProcessors.Combatant;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace RainbowMage.OverlayPlugin.MemoryProcessors.Target
 {
     public abstract class TargetMemory {
         private FFXIVMemory memory;
         private ILogger logger;
-        private MemoryProcessors.Combatant.CombatantMemoryManager combatantMemory;
-        private uint loggedScanErrors = 0;
+        private ICombatantMemory combatantMemory;
 
         private IntPtr targetAddress = IntPtr.Zero;
 
@@ -25,16 +25,17 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Target
             this.targetTargetOffset = targetTargetOffset;
             this.focusTargetOffset = focusTargetOffset;
             this.hoverTargetOffset = hoverTargetOffset;
-            memory = new FFXIVMemory(container);
-            memory.OnProcessChange += ResetPointers;
             logger = container.Resolve<ILogger>();
-            combatantMemory = container.Resolve<MemoryProcessors.Combatant.CombatantMemoryManager>();
-            GetPointerAddress();
+            memory = container.Resolve<FFXIVMemory>();
+            memory.RegisterOnProcessChangeHandler(ResetPointers);
+            combatantMemory = container.Resolve<ICombatantMemory>();
         }
 
-        private void ResetPointers(object sender, EventArgs _)
+        private void ResetPointers(object sender, Process p)
         {
             targetAddress = IntPtr.Zero;
+            if (p != null)
+                GetPointerAddress();
         }
 
         private bool HasValidPointers()
@@ -48,9 +49,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Target
         {
             if (!memory.IsValid())
                 return false;
-
-            if (!HasValidPointers())
-                GetPointerAddress();
 
             if (!HasValidPointers())
                 return false;
@@ -81,23 +79,13 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Target
 
             logger.Log(LogLevel.Debug, "targetAddress: 0x{0:X}", targetAddress.ToInt64());
 
-            if (!success)
+            if (success)
             {
-                if (loggedScanErrors < 10)
-                {
-                    logger.Log(LogLevel.Error, $"Failed to find target memory via {GetType().Name}: {string.Join(", ", fail)}.");
-                    loggedScanErrors++;
-
-                    if (loggedScanErrors == 10)
-                    {
-                        logger.Log(LogLevel.Error, "Further target memory errors won't be logged.");
-                    }
-                }
+                logger.Log(LogLevel.Info, $"Found target memory via {GetType().Name}.");
             }
             else
             {
-                logger.Log(LogLevel.Info, $"Found target memory via {GetType().Name}.");
-                loggedScanErrors = 0;
+                logger.Log(LogLevel.Error, $"Failed to find target memory via {GetType().Name}: {string.Join(", ", fail)}.");
             }
 
             return success;

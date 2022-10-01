@@ -5,36 +5,33 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.InCombat
     public interface IInCombatMemory
     {
         bool GetInCombat();
+
+        bool IsValid();
     }
 
     class InCombatMemoryManager : IInCombatMemory
     {
         private readonly TinyIoCContainer container;
         private readonly FFXIVRepository repository;
-        private InCombatMemory memory = null;
+        private IInCombatMemory memory = null;
 
         public InCombatMemoryManager(TinyIoCContainer container)
         {
             this.container = container;
-            container.Register(new InCombatMemory60(container));
-            container.Register(new InCombatMemory61(container));
-            container.Register(new InCombatMemory62(container));
+            container.Register<IInCombatMemory60, InCombatMemory60>();
+            container.Register<IInCombatMemory61, InCombatMemory61>();
             repository = container.Resolve<FFXIVRepository>();
         }
 
         private void FindMemory()
         {
-            List<InCombatMemory> candidates = new List<InCombatMemory>();
-            // For CN/KR, try the lang-specific candidate first, then fall back to intl
-            if (repository.GetLanguage() == FFXIV_ACT_Plugin.Common.Language.Chinese)
+            List<IInCombatMemory> candidates = new List<IInCombatMemory>();
+            // For CN, try the lang-specific candidate first, then fall back to intl
+            if (repository.GetLanguage() == FFXIV_ACT_Plugin.Common.Language.Korean)
             {
-                candidates.Add(container.Resolve<InCombatMemory61>());
+                candidates.Add(container.Resolve<IInCombatMemory60>());
             }
-            else if (repository.GetLanguage() == FFXIV_ACT_Plugin.Common.Language.Korean)
-            {
-                candidates.Add(container.Resolve<InCombatMemory60>());
-            }
-            candidates.Add(container.Resolve<InCombatMemory62>());
+            candidates.Add(container.Resolve<IInCombatMemory61>());
 
             foreach (var c in candidates)
             {

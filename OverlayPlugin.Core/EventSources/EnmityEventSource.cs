@@ -20,12 +20,12 @@ namespace RainbowMage.OverlayPlugin.EventSources
 {
     public class EnmityEventSource : EventSourceBase
     {
-        private InCombatMemoryManager inCombatMemory;
-        private CombatantMemoryManager combatantMemory;
-        private TargetMemoryManager targetMemory;
-        private EnmityMemoryManager enmityMemory;
-        private AggroMemoryManager aggroMemory;
-        private EnmityHudMemoryManager enmityHudMemory;
+        private IInCombatMemory inCombatMemory;
+        private ICombatantMemory combatantMemory;
+        private ITargetMemory targetMemory;
+        private IEnmityMemory enmityMemory;
+        private IAggroMemory aggroMemory;
+        private IEnmityHudMemory enmityHudMemory;
 
         // General information about the target, focus target, hover target.  Also, enmity entries for main target.
         private const string EnmityTargetDataEvent = "EnmityTargetData";
@@ -55,12 +55,12 @@ namespace RainbowMage.OverlayPlugin.EventSources
 
         public EnmityEventSource(TinyIoCContainer container) : base(container)
         {
-            inCombatMemory = container.Resolve<InCombatMemoryManager>();
-            combatantMemory = container.Resolve<CombatantMemoryManager>();
-            targetMemory = container.Resolve<TargetMemoryManager>();
-            enmityMemory = container.Resolve<EnmityMemoryManager>();
-            aggroMemory = container.Resolve<AggroMemoryManager>();
-            enmityHudMemory = container.Resolve<EnmityHudMemoryManager>();
+            inCombatMemory = container.Resolve<IInCombatMemory>();
+            combatantMemory = container.Resolve<ICombatantMemory>();
+            targetMemory = container.Resolve<ITargetMemory>();
+            enmityMemory = container.Resolve<IEnmityMemory>();
+            aggroMemory = container.Resolve<IAggroMemory>();
+            enmityHudMemory = container.Resolve<IEnmityHudMemory>();
 
             RegisterEventTypes(new List<string> {
                 EnmityTargetDataEvent, EnmityAggroListEvent, TargetableEnemiesEvent
@@ -89,53 +89,52 @@ namespace RainbowMage.OverlayPlugin.EventSources
 
         private void UpdateInCombat()
         {
-            if (inCombatMemory.IsValid())
+            if (!inCombatMemory.IsValid())
+                return;
+
+            // Handle optional "end encounter of combat" logic.
+            bool inGameCombat = inCombatMemory.GetInCombat();
+            if (inGameCombat != lastInGameCombat)
             {
+                logger.Log(LogLevel.Debug, inGameCombat ? "Entered combat" : "Left combat");
+            }
 
-                // Handle optional "end encounter of combat" logic.
-                bool inGameCombat = inCombatMemory.GetInCombat();
-                if (inGameCombat != lastInGameCombat)
+            // If we've transitioned to being out of combat, start a delayed task to end the ACT encounter.
+            if (Config.EndEncounterOutOfCombat && lastInGameCombat && !inGameCombat)
+            {
+                endEncounterToken = new CancellationTokenSource();
+                Task.Run(async delegate
                 {
-                    logger.Log(LogLevel.Debug, inGameCombat ? "Entered combat" : "Left combat");
-                }
-
-                // If we've transitioned to being out of combat, start a delayed task to end the ACT encounter.
-                if (Config.EndEncounterOutOfCombat && lastInGameCombat && !inGameCombat)
-                {
-                    endEncounterToken = new CancellationTokenSource();
-                    Task.Run(async delegate
+                    await Task.Delay(endEncounterOutOfCombatDelayMs, endEncounterToken.Token);
+                    ActGlobals.oFormActMain.Invoke((Action)(() =>
                     {
-                        await Task.Delay(endEncounterOutOfCombatDelayMs, endEncounterToken.Token);
-                        ActGlobals.oFormActMain.Invoke((Action)(() =>
-                        {
-                            ActGlobals.oFormActMain.EndCombat(true);
-                        }));
-                    });
-                }
-                // If combat starts again, cancel any outstanding tasks to stop the ACT encounter.
-                // If the task has already run, this will not do anything.
-                if (inGameCombat && endEncounterToken != null)
-                {
-                    endEncounterToken.Cancel();
-                    endEncounterToken = null;
-                }
-                if (lastInGameCombat != inGameCombat)
-                {
-                    CombatStatusChanged?.Invoke(this, new CombatStatusChangedArgs(inGameCombat));
-                }
-                lastInGameCombat = inGameCombat;
+                        ActGlobals.oFormActMain.EndCombat(true);
+                    }));
+                });
+            }
+            // If combat starts again, cancel any outstanding tasks to stop the ACT encounter.
+            // If the task has already run, this will not do anything.
+            if (inGameCombat && endEncounterToken != null)
+            {
+                endEncounterToken.Cancel();
+                endEncounterToken = null;
+            }
+            if (lastInGameCombat != inGameCombat)
+            {
+                CombatStatusChanged?.Invoke(this, new CombatStatusChangedArgs(inGameCombat));
+            }
+            lastInGameCombat = inGameCombat;
 
-                if (HasSubscriber(InCombatEvent))
+            if (HasSubscriber(InCombatEvent))
+            {
+                bool inACTCombat = Advanced_Combat_Tracker.ActGlobals.oFormActMain.InCombat;
+                if (sentCombatData == null || sentCombatData.inACTCombat != inACTCombat || sentCombatData.inGameCombat != inGameCombat)
                 {
-                    bool inACTCombat = Advanced_Combat_Tracker.ActGlobals.oFormActMain.InCombat;
-                    if (sentCombatData == null || sentCombatData.inACTCombat != inACTCombat || sentCombatData.inGameCombat != inGameCombat)
-                    {
-                        if (sentCombatData == null)
-                            sentCombatData = new InCombatDataObject();
-                        sentCombatData.inACTCombat = inACTCombat;
-                        sentCombatData.inGameCombat = inGameCombat;
-                        DispatchAndCacheEvent(JObject.FromObject(sentCombatData));
-                    }
+                    if (sentCombatData == null)
+                        sentCombatData = new InCombatDataObject();
+                    sentCombatData.inACTCombat = inACTCombat;
+                    sentCombatData.inGameCombat = inGameCombat;
+                    DispatchAndCacheEvent(JObject.FromObject(sentCombatData));
                 }
             }
         }

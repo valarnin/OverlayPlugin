@@ -5,36 +5,35 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.EnmityHud
     public interface IEnmityHudMemory
     {
         List<EnmityHudEntry> GetEnmityHudEntries();
+
+        bool IsValid();
     }
 
     public class EnmityHudMemoryManager : IEnmityHudMemory
     {
         private readonly TinyIoCContainer container;
         private readonly FFXIVRepository repository;
-        private EnmityHudMemory memory = null;
+        private IEnmityHudMemory memory = null;
 
         public EnmityHudMemoryManager(TinyIoCContainer container)
         {
             this.container = container;
-            container.Register(new EnmityHudMemory60(container));
-            container.Register(new EnmityHudMemory61(container));
-            container.Register(new EnmityHudMemory62(container));
+            container.Register<IEnmityHudMemory60, EnmityHudMemory60>();
+            container.Register<IEnmityHudMemory62, EnmityHudMemory62>();
             repository = container.Resolve<FFXIVRepository>();
         }
 
         private void FindMemory()
         {
-            List<EnmityHudMemory> candidates = new List<EnmityHudMemory>();
+            List<IEnmityHudMemory> candidates = new List<IEnmityHudMemory>();
             // For CN/KR, try the lang-specific candidate first, then fall back to intl
-            if (repository.GetLanguage() == FFXIV_ACT_Plugin.Common.Language.Chinese)
+            if (
+                repository.GetLanguage() == FFXIV_ACT_Plugin.Common.Language.Chinese ||
+                repository.GetLanguage() == FFXIV_ACT_Plugin.Common.Language.Korean)
             {
-                candidates.Add(container.Resolve<EnmityHudMemory61>());
+                candidates.Add(container.Resolve<IEnmityHudMemory60>());
             }
-            else if (repository.GetLanguage() == FFXIV_ACT_Plugin.Common.Language.Korean)
-            {
-                candidates.Add(container.Resolve<EnmityHudMemory60>());
-            }
-            candidates.Add(container.Resolve<EnmityHudMemory62>());
+            candidates.Add(container.Resolve<IEnmityHudMemory62>());
 
             foreach (var c in candidates)
             {
