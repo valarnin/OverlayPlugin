@@ -12,6 +12,8 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using FFXIV_ACT_Plugin.Common;
 using RainbowMage.OverlayPlugin.MemoryProcessors.Combatant;
+// For some reason this using is required by the github build?
+using System.Reflection;
 
 using PluginCombatant = FFXIV_ACT_Plugin.Common.Models.Combatant;
 
