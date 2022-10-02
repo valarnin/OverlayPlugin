@@ -55,8 +55,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.InCombat
             if (!memory.IsValid())
                 return false;
 
-            bool success = true;
-
             List<string> fail = new List<string>();
 
             List<IntPtr> list = memory.SigScan(inCombatSignature, inCombatSignatureOffset, true, inCombatRIPOffset);
@@ -69,22 +67,19 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.InCombat
             {
                 inCombatAddress = IntPtr.Zero;
                 fail.Add(nameof(inCombatAddress));
-                success = false;
             }
 
 
             logger.Log(LogLevel.Debug, "inCombatAddress: 0x{0:X}", inCombatAddress.ToInt64());
 
-            if (success)
+            if (fail.Count == 0)
             {
                 logger.Log(LogLevel.Info, $"Found in combat memory via {GetType().Name}.");
-            }
-            else
-            {
-                logger.Log(LogLevel.Error, $"Failed to find in combat memory via {GetType().Name}: {string.Join(", ", fail)}.");
+                return true;
             }
 
-            return success;
+            logger.Log(LogLevel.Error, $"Failed to find in combat memory via {GetType().Name}: {string.Join(", ", fail)}.");
+            return false;
         }
 
         public bool GetInCombat()

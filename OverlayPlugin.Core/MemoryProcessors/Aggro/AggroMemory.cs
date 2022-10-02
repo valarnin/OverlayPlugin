@@ -60,8 +60,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Aggro
             if (!memory.IsValid())
                 return false;
 
-            bool success = true;
-
             List<string> fail = new List<string>();
 
             List<IntPtr> list = memory.SigScan(aggroSignature, 0, true);
@@ -73,21 +71,18 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Aggro
             {
                 aggroAddress = IntPtr.Zero;
                 fail.Add(nameof(aggroAddress));
-                success = false;
             }
 
             logger.Log(LogLevel.Debug, "aggroAddress: 0x{0:X}", aggroAddress.ToInt64());
 
-            if (success)
+            if (fail.Count == 0)
             {
                 logger.Log(LogLevel.Info, $"Found aggro memory via {GetType().Name}.");
-            }
-            else
-            {
-                logger.Log(LogLevel.Error, $"Failed to find aggro memory via {GetType().Name}: {string.Join(",", fail)}.");
+                return true;
             }
 
-            return success;
+            logger.Log(LogLevel.Error, $"Failed to find aggro memory via {GetType().Name}: {string.Join(",", fail)}.");
+            return false;
         }
 
         [StructLayout(LayoutKind.Explicit, Size = Size)]

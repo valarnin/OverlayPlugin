@@ -61,8 +61,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.EnmityHud
             if (!memory.IsValid())
                 return false;
 
-            bool success = true;
-
             List<string> fail = new List<string>();
 
             List<IntPtr> list = memory.SigScan(enmityHudSignature, 0, true);
@@ -73,28 +71,24 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.EnmityHud
                 if (enmityHudAddress == IntPtr.Zero)
                 {
                     fail.Add(nameof(enmityHudAddress));
-                    success = false;
                 }
             }
             else
             {
                 enmityHudAddress = IntPtr.Zero;
                 fail.Add(nameof(enmityHudAddress));
-                success = false;
             }
 
             logger.Log(LogLevel.Debug, "enmityHudAddress: 0x{0:X}", enmityHudAddress.ToInt64());
 
-            if (success)
+            if (fail.Count == 0)
             {
                 logger.Log(LogLevel.Info, $"Found enmity HUD memory via {GetType().Name}.");
-            }
-            else
-            {
-                logger.Log(LogLevel.Error, $"Failed to find enmity HUD memory via {GetType().Name}: {string.Join(", ", fail)}.");
+                return true;
             }
 
-            return success;
+            logger.Log(LogLevel.Error, $"Failed to find enmity HUD memory via {GetType().Name}: {string.Join(", ", fail)}.");
+            return false;
         }
 
         private bool GetDynamicPointerAddress()

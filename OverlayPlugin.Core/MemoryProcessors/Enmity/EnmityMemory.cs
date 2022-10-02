@@ -56,8 +56,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Enmity
             if (!memory.IsValid())
                 return false;
 
-            bool success = true;
-
             List<string> fail = new List<string>();
 
             List<IntPtr> list = memory.SigScan(enmitySignature, 0, true);
@@ -69,21 +67,18 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Enmity
             {
                 enmityAddress = IntPtr.Zero;
                 fail.Add(nameof(enmityAddress));
-                success = false;
             }
 
             logger.Log(LogLevel.Debug, "enmityAddress: 0x{0:X}", enmityAddress.ToInt64());
 
-            if (success)
+            if (fail.Count == 0)
             {
                 logger.Log(LogLevel.Info, $"Found enmity memory via {GetType().Name}.");
-            }
-            else
-            {
-                logger.Log(LogLevel.Error, $"Failed to find enmity memory via {GetType().Name}: {string.Join(", ", fail)}.");
+                return true;
             }
 
-            return success;
+            logger.Log(LogLevel.Error, $"Failed to find enmity memory via {GetType().Name}: {string.Join(", ", fail)}.");
+            return false;
         }
 
         [StructLayout(LayoutKind.Explicit, Size = Size)]

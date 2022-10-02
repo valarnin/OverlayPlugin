@@ -61,8 +61,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Target
             if (!memory.IsValid())
                 return false;
 
-            bool success = true;
-
             List<string> fail = new List<string>();
 
             List<IntPtr> list = memory.SigScan(targetSignature, 0, true);
@@ -74,21 +72,18 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Target
             {
                 targetAddress = IntPtr.Zero;
                 fail.Add(nameof(targetAddress));
-                success = false;
             }
 
             logger.Log(LogLevel.Debug, "targetAddress: 0x{0:X}", targetAddress.ToInt64());
 
-            if (success)
+            if (fail.Count == 0)
             {
                 logger.Log(LogLevel.Info, $"Found target memory via {GetType().Name}.");
-            }
-            else
-            {
-                logger.Log(LogLevel.Error, $"Failed to find target memory via {GetType().Name}: {string.Join(", ", fail)}.");
+                return true;
             }
 
-            return success;
+            logger.Log(LogLevel.Error, $"Failed to find target memory via {GetType().Name}: {string.Join(", ", fail)}.");
+            return false;
         }
 
         private Combatant.Combatant GetTargetRelativeCombatant(int offset)

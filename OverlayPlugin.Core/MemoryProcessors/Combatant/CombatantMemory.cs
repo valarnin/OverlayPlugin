@@ -61,8 +61,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
             if (!memory.IsValid())
                 return false;
 
-            bool success = true;
-
             List<string> fail = new List<string>();
 
             List<IntPtr> list = memory.SigScan(charmapSignature, 0, true);
@@ -74,7 +72,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
             {
                 charmapAddress = IntPtr.Zero;
                 fail.Add(nameof(charmapAddress));
-                success = false;
             }
 
             logger.Log(LogLevel.Debug, "charmapAddress: 0x{0:X}", charmapAddress.ToInt64());
@@ -85,16 +82,14 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
                 logger.Log(LogLevel.Debug, "MyCharacter: '{0}' (0x{1:X})", c.Name, c.ID);
             }
 
-            if (success)
+            if (fail.Count == 0)
             {
                 logger.Log(LogLevel.Info, $"Found combatant memory via {GetType().Name}.");
-            }
-            else
-            {
-                logger.Log(LogLevel.Error, $"Failed to find combatant memory via {GetType().Name}: {string.Join(",", fail)}.");
+                return true;
             }
 
-            return success;
+            logger.Log(LogLevel.Error, $"Failed to find combatant memory via {GetType().Name}: {string.Join(",", fail)}.");
+            return false;
         }
 
         public Combatant GetSelfCombatant()

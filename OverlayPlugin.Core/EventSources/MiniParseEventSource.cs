@@ -260,79 +260,79 @@ namespace RainbowMage.OverlayPlugin.EventSources
             List<Dictionary<string, object>> filteredCombatants = new List<Dictionary<string, object>>();
             var pluginCombatants = repository.GetCombatants();
 
-            if (combatantMemory.IsValid())
+            if (!combatantMemory.IsValid())
+                return filteredCombatants;
+
+            var memCombatants = combatantMemory.GetCombatantList();
+            foreach (var combatant in memCombatants)
             {
-                var memCombatants = combatantMemory.GetCombatantList();
-                foreach (var combatant in memCombatants)
+                if (combatant.ID == 0)
                 {
-                    if (combatant.ID == 0)
-                    {
-                        continue;
-                    }
+                    continue;
+                }
 
-                    bool include = false;
+                bool include = false;
 
-                    var combatantName = combatant.Name;
+                var combatantName = combatant.Name;
 
-                    if (ids.Count == 0 && names.Count == 0)
+                if (ids.Count == 0 && names.Count == 0)
+                {
+                    include = true;
+                }
+                else
+                {
+                    foreach (var id in ids)
                     {
-                        include = true;
-                    }
-                    else
-                    {
-                        foreach (var id in ids)
+                        if (combatant.ID == id)
                         {
-                            if (combatant.ID == id)
+                            include = true;
+                            break;
+                        }
+                    }
+
+                    if (!include)
+                    {
+                        foreach (var name in names)
+                        {
+                            if (String.Equals(combatantName, name, StringComparison.InvariantCultureIgnoreCase))
                             {
                                 include = true;
                                 break;
                             }
                         }
-
-                        if (!include)
-                        {
-                            foreach (var name in names)
-                            {
-                                if (String.Equals(combatantName, name, StringComparison.InvariantCultureIgnoreCase))
-                                {
-                                    include = true;
-                                    break;
-                                }
-                            }
-                        }
                     }
+                }
 
-                    if (include)
-                    {
-                        var jObjCombatant = JObject.FromObject(combatant).ToObject<Dictionary<string, object>>();
-                        var ID = Convert.ToUInt32(jObjCombatant["ID"]);
+                if (include)
+                {
+                    var jObjCombatant = JObject.FromObject(combatant).ToObject<Dictionary<string, object>>();
+                    var ID = Convert.ToUInt32(jObjCombatant["ID"]);
                         
-                        var pluginCombatant = pluginCombatants.FirstOrDefault((PluginCombatant c) => c.ID == ID);
-                        if (pluginCombatant != null)
-                        {
-                            jObjCombatant["PartyType"] = GetPartyType(pluginCombatant);
-                        }
-
-                        // Handle 0xFFFE (outofrange1) and 0xFFFF (outofrange2) values for WorldID
-                        var WorldID = Convert.ToUInt32(jObjCombatant["WorldID"]);
-                        string WorldName = null;
-                        if (WorldID < 0xFFFE)
-                        {
-                            WorldName = GetWorldName(WorldID);
-                        }
-                        jObjCombatant["WorldName"] = WorldName;
-
-                        // If the request is filtering properties, remove them here
-                        if (props.Count > 0)
-                        {
-                            jObjCombatant.Keys
-                                .Where(k => !props.Contains(k))
-                                .ToList()
-                                .ForEach(k => jObjCombatant.Remove(k));
-                        }
-
-                        filteredCombatants.Add(jObjCombatant);
+                    var pluginCombatant = pluginCombatants.FirstOrDefault((PluginCombatant c) => c.ID == ID);
+                    if (pluginCombatant != null)
+                    {
+                        jObjCombatant["PartyType"] = GetPartyType(pluginCombatant);
                     }
+
+                    // Handle 0xFFFE (outofrange1) and 0xFFFF (outofrange2) values for WorldID
+                    var WorldID = Convert.ToUInt32(jObjCombatant["WorldID"]);
+                    string WorldName = null;
+                    if (WorldID < 0xFFFE)
+                    {
+                        WorldName = GetWorldName(WorldID);
+                    }
+                    jObjCombatant["WorldName"] = WorldName;
+
+                    // If the request is filtering properties, remove them here
+                    if (props.Count > 0)
+                    {
+                        jObjCombatant.Keys
+                            .Where(k => !props.Contains(k))
+                            .ToList()
+                            .ForEach(k => jObjCombatant.Remove(k));
+                    }
+
+                    filteredCombatants.Add(jObjCombatant);
                 }
             }
 
