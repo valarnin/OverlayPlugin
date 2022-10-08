@@ -27,7 +27,7 @@ jobs:
 
       - name: Add Custom Problem Matcher
         run: |
-          echo "::add-matcher::.github/matchers/${{ github.job }}.json"
+          echo "::add-matcher::.github/matchers/dotnet-format.json"
 
       - name: Run Build
         run: dotnet format --verify-no-changes
