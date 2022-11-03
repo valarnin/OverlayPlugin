@@ -13,6 +13,7 @@ using Advanced_Combat_Tracker;
 using FFXIV_ACT_Plugin.Common;
 using Newtonsoft.Json.Linq;
 using RainbowMage.OverlayPlugin.MemoryProcessors.Combatant;
+using RainbowMage.OverlayPlugin.MemoryProcessors.PartyList;
 using RainbowMage.OverlayPlugin.NetworkProcessors;
 using PluginCombatant = FFXIV_ACT_Plugin.Common.Models.Combatant;
 
@@ -65,6 +66,7 @@ namespace RainbowMage.OverlayPlugin.EventSources
             Name = "MiniParse";
             repository = container.Resolve<FFXIVRepository>();
             combatantMemory = container.Resolve<ICombatantMemory>();
+            var partyListMemory = container.Resolve<IPartyListMemory>();
 
             // FileChanged isn't actually raised by this event source. That event is generated in MiniParseOverlay directly.
             RegisterEventTypes(new List<string> {
@@ -143,6 +145,12 @@ namespace RainbowMage.OverlayPlugin.EventSources
                 {
                     combatants
                 });
+            });
+
+            RegisterEventHandler("getPartyList", (msg) =>
+            {
+                var partyList = partyListMemory.GetPartyList();
+                return partyList.ToJObject();
             });
 
             RegisterEventHandler("saveData", (msg) =>
