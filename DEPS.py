@@ -21,4 +21,10 @@ deps = {
         'strip': 1,
         'hash': ['sha256', '032f43f2674008c761af19bf536374128c16241fb234699a55f9fb603fcfbae7'],
     },
+    'curl': {
+        'url': 'https://github.com/aers/FFXIVClientStructs/archive/8506108f3772ddcb608cf7cf0612ce6cb2b9bbf7.zip',
+        'dest': 'Thirdparty/FFXIVClientStructs',
+        'strip': 1,
+        'hash': ['sha256', '127492833681f1e1f826e803bf69e3a34a6fd1413c3014e88aae37571be60cd2'],
+    },
 }

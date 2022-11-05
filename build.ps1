@@ -17,6 +17,7 @@ try {
     } else {
         $VS_PATH = & "$DEFAULT_VSWHERE_PATH" -latest -property installationPath
     }
+    $VS_PATH = 'C:\Program Files (x86)\Microsoft Visual Studio\2022\Community'
 
     if ( -not (Test-Path "Thirdparty\ACT\Advanced Combat Tracker.exe" )) {
         echo 'Error: Please run tools\fetch_deps.py'
@@ -29,9 +30,44 @@ try {
         exit 1
     }
 
+    if ( -not (Test-Path "Thirdparty\FFXIVClientStructs\FFXIVClientStructs.sln" )) {
+        echo 'Error: Please run tools\fetch_deps.py'
+        exit 1
+    }
+
     $ENV:PATH = "$VS_PATH\MSBuild\Current\Bin;${ENV:PATH}";
     if (Test-Path "C:\Program Files\7-Zip\7z.exe") {
         $ENV:PATH = "C:\Program Files\7-Zip;${ENV:PATH}";
+    }
+
+    if ( -not (Test-Path "Thirdparty\FFXIVClientStructs\bin\Release\FFXIVClientStructs.dll" )) {
+        echo "==> Building FFXIVClientStructs..."
+
+        cd Thirdparty\FFXIVClientStructs
+
+        # Replace some stuff that won't work in dotnetstandard build target
+        cd FFXIVClientStructs
+        gci -r FFXIV.cs* |
+            foreach-object { $a = $_.fullname; ( get-content $a ) |
+            foreach-object { $_ -replace '^(?:    |\t)[^ \t].*?(?:\n[^\n]+)+(?:\n[^\n]+Span<[^\n]+)+(?:\n[^\n]+)+\n(?:    |\t)\}$','' } |
+            foreach-object { $_ -replace '^(?:    |\t)public Span.*?$','' } |
+            foreach-object { $_ -replace 'using System.Text.Json','using Newtonsoft.Json' } |
+            foreach-object { $_ -replace '<PackageReference Include="Serilog" Version="2.6.0" />','JsonConvert.SerializeObject(textCache)' } |
+            foreach-object { $_ -replace '<TargetFramework>net5</TargetFramework>','<TargetFramework>net48</TargetFramework>' } |
+            foreach-object { $_ -replace 'JsonSerializer.Serialize\(textCache, new JsonSerializerOptions \{WriteIndented = true\}\)','JsonConvert.SerializeObject(textCache)' } |
+            foreach-object { $_ -replace 'return Marshal\.PtrToStringUTF8\(\(nint\) lua_tolstring\(idx, null\)\);','return "";' } |
+            foreach-object { $_ -replace 'public string String => Marshal\.PtrToStringUTF8\(\(IntPtr\)\(\(ulong\) StringAndFlag & ~1LU\)\)','public string String => ""' } |
+            foreach-object { $_ -replace 'nameof\(Index\)','nameof(index)' } |
+            foreach-object { $_ -replace 'MathF','Math' } |
+            foreach-object { $_ -replace '^    public bool GetLogMessageDetail.*?\n(?:.*?\n)+?    \}$','' } |
+            foreach-object { $_ -replace '','' } |
+            set-content $a }
+        cd ..
+
+        msbuild -p:Configuration=Release "FFXIVClientStructs.sln" -t:Restore
+        msbuild -p:Configuration=Release "FFXIVClientStructs.sln"
+
+        cd ..\..
     }
 
     if ( -not (Test-Path .\OverlayPlugin.Updater\Resources\libcurl.dll)) {
