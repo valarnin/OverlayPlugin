@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using FFXIVClientStructs.Global.FFXIV.Client.UI;
 using RainbowMage.OverlayPlugin.MemoryProcessors.AtkGui.FFXIVClientStructs;
-using FFXIVClientStructs.FFXIV.Client.UI;
 
 namespace RainbowMage.OverlayPlugin.MemoryProcessors.PartyList
 {

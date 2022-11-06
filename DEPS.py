@@ -23,7 +23,7 @@ deps = {
     },
     'curl': {
         'url': 'https://github.com/aers/FFXIVClientStructs/archive/8506108f3772ddcb608cf7cf0612ce6cb2b9bbf7.zip',
-        'dest': 'Thirdparty/FFXIVClientStructs',
+        'dest': 'OverlayPlugin.Core/Thirdparty/FFXIVClientStructs/Global',
         'strip': 1,
         'hash': ['sha256', '127492833681f1e1f826e803bf69e3a34a6fd1413c3014e88aae37571be60cd2'],
     },

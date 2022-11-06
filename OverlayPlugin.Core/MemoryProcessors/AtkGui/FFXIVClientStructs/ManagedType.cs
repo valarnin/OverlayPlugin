@@ -155,7 +155,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.AtkGui.FFXIVClientStructs
                         var t = typeof(ManagedType<>);
                         var dynamicT = t.MakeGenericType(typeof(T).GetField(key).FieldType);
                         var method = dynamicT.GetMethod("GetManagedTypeFromBaseType");
-                        dynamic obj = 
+                        dynamic obj =
                             method.Invoke(null, new object[] { result, memory, readPtrMap });
                         jObject[key] = obj.ToJObject();
                     }
@@ -234,7 +234,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.AtkGui.FFXIVClientStructs
 
         private unsafe object DynamicCast(Type elementType, byte* v)
         {
-            switch(elementType.Name)
+            switch (elementType.Name)
             {
                 case "Boolean":
                     return *(Boolean*)v;

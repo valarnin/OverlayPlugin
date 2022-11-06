@@ -46,9 +46,6 @@
       <HintPath>..\Thirdparty\ACT\Advanced Combat Tracker.exe</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="FFXIVClientStructs">
-      <HintPath>..\Thirdparty\FFXIVClientStructs\bin\Release\FFXIVClientStructs.dll</HintPath>
-    </Reference>
     <Reference Include="FFXIV_ACT_Plugin.Common">
       <HintPath>..\Thirdparty\FFXIV_ACT_Plugin\SDK\FFXIV_ACT_Plugin.Common.dll</HintPath>
       <Private>False</Private>
@@ -225,6 +222,7 @@
       <DependentUpon>WSConfigPanel.cs</DependentUpon>
     </Compile>
     <Compile Include="WebSocket\WSServer.cs" />
+    <Compile Include="Thirdparty\**\*.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="resources\enmity\aggrolist.html">

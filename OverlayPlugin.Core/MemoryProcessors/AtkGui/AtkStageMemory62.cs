@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using FFXIVClientStructs.Global.FFXIV.Component.GUI;
 using RainbowMage.OverlayPlugin.MemoryProcessors.AtkGui.FFXIVClientStructs;
-using FFXIVClientStructs.FFXIV.Component.GUI;
 
 namespace RainbowMage.OverlayPlugin.MemoryProcessors.AtkStage
 {
-    using AtkStage = FFXIVClientStructs.FFXIV.Component.GUI.AtkStage;
+    using AtkStage = FFXIVClientStructs.Global.FFXIV.Component.GUI.AtkStage;
     interface IAtkStageMemory62 : IAtkStageMemory { }
 
     class AtkStageMemory62 : AtkStageMemory, IAtkStageMemory62
