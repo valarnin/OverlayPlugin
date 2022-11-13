@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using FFXIVClientStructs.Global.FFXIV.Component.GUI;
@@ -6,7 +7,7 @@ using RainbowMage.OverlayPlugin.MemoryProcessors.AtkGui.FFXIVClientStructs;
 
 namespace RainbowMage.OverlayPlugin.MemoryProcessors.AtkStage
 {
-    using AtkStage = FFXIVClientStructs.Global.FFXIV.Component.GUI.AtkStage;
+    using AtkStage = global::FFXIVClientStructs.Global.FFXIV.Component.GUI.AtkStage;
     interface IAtkStageMemory62 : IAtkStageMemory { }
 
     class AtkStageMemory62 : AtkStageMemory, IAtkStageMemory62
@@ -54,6 +55,27 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.AtkStage
             }
 
             return IntPtr.Zero;
+        }
+
+        private static Dictionary<string, Type> AddonMap = new Dictionary<string, Type>() {
+            { "_PartyList", typeof(global::FFXIVClientStructs.Global.FFXIV.Client.UI.AddonPartyList) },
+        };
+
+        public unsafe dynamic GetAddon(string name)
+        {
+            if (!AddonMap.ContainsKey(name) && !IsValid())
+            {
+                return null;
+            }
+
+            var ptr = GetAddonAddress(name);
+
+            if (ptr != IntPtr.Zero)
+            {
+                return ManagedType<AtkStage>.GetDynamicManagedTypeFromIntPtr(ptr, memory, AddonMap[name]);
+            }
+
+            return null;
         }
     }
 }

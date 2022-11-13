@@ -19,7 +19,6 @@ using RainbowMage.OverlayPlugin.MemoryProcessors.Combatant;
 using RainbowMage.OverlayPlugin.MemoryProcessors.Enmity;
 using RainbowMage.OverlayPlugin.MemoryProcessors.EnmityHud;
 using RainbowMage.OverlayPlugin.MemoryProcessors.InCombat;
-using RainbowMage.OverlayPlugin.MemoryProcessors.PartyList;
 using RainbowMage.OverlayPlugin.MemoryProcessors.Target;
 using RainbowMage.OverlayPlugin.NetworkProcessors;
 using RainbowMage.OverlayPlugin.Overlays;
@@ -268,7 +267,6 @@ namespace RainbowMage.OverlayPlugin
                             _container.Register<IEnmityHudMemory, EnmityHudMemoryManager>();
                             _container.Register<IInCombatMemory, InCombatMemoryManager>();
                             _container.Register<IAtkStageMemory, AtkStageMemoryManager>();
-                            _container.Register<IPartyListMemory, PartyListMemoryManager>();
 
                             _container.Register(new OverlayPluginLogLines(_container));
 
@@ -448,6 +446,7 @@ namespace RainbowMage.OverlayPlugin
                 // Make sure the event sources are ready before we load any overlays.
                 registry.StartEventSource(new MiniParseEventSource(_container));
                 registry.StartEventSource(new EnmityEventSource(_container));
+                registry.StartEventSource(new FFXIVClientStructsEventSource(_container));
 
                 registry.RegisterOverlay<MiniParseOverlay>();
                 registry.RegisterOverlay<SpellTimerOverlay>();

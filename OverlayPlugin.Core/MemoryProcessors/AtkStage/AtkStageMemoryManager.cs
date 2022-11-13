@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using RainbowMage.OverlayPlugin.MemoryProcessors.AtkGui.FFXIVClientStructs;
 
 namespace RainbowMage.OverlayPlugin.MemoryProcessors.AtkStage
 {
     public interface IAtkStageMemory : IVersionedMemory
     {
         IntPtr GetAddonAddress(string name);
+        dynamic GetAddon(string name);
     }
 
     class AtkStageMemoryManager : IAtkStageMemory
@@ -65,6 +67,15 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.AtkStage
                 return IntPtr.Zero;
             }
             return memory.GetAddonAddress(name);
+        }
+
+        public dynamic GetAddon(string name)
+        {
+            if (!IsValid())
+            {
+                return null;
+            }
+            return memory.GetAddon(name);
         }
     }
 }

@@ -10,6 +10,11 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.AtkGui.FFXIVClientStructs
 {
     public class ManagedType<T> : DynamicObject where T : unmanaged
     {
+        public static dynamic GetDynamicManagedTypeFromIntPtr(IntPtr ptr, FFXIVMemory memory, Type type, Dictionary<IntPtr, object> readPtrMap = null)
+        {
+            return typeof(ManagedType<>).MakeGenericType(type)
+                .GetMethod("GetManagedTypeFromIntPtr").Invoke(null, new object[] { ptr, memory, readPtrMap });
+        }
         public static ManagedType<T> GetManagedTypeFromIntPtr(IntPtr ptr, FFXIVMemory memory, Dictionary<IntPtr, object> readPtrMap = null)
         {
             if (readPtrMap == null)
@@ -21,6 +26,12 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.AtkGui.FFXIVClientStructs
                 return (ManagedType<T>)readPtrMap[ptr];
             }
             return new ManagedType<T>(ptr, memory, readPtrMap);
+        }
+
+        public static dynamic GetDynamicManagedTypeFromBaseType(object baseObj, FFXIVMemory memory, Type type, Dictionary<IntPtr, object> readPtrMap = null)
+        {
+            return typeof(ManagedType<>).MakeGenericType(type)
+                .GetMethod("GetManagedTypeFromBaseType").Invoke(null, new object[] { baseObj, memory, readPtrMap });
         }
 
         public static ManagedType<T> GetManagedTypeFromBaseType(T baseObj, FFXIVMemory memory, Dictionary<IntPtr, object> readPtrMap = null)
@@ -298,6 +309,40 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.AtkGui.FFXIVClientStructs
             }
 
             return offset;
+        }
+
+        public T ToType()
+        {
+            T obj = default;
+
+            foreach (var field in typeof(T).GetFields())
+            {
+                if (field.FieldType.IsPointer)
+                {
+                    // Treat some pointers differently by just returning the memory address
+                    if (
+                        // <*>** pointers are multidimensional arrays
+                        field.FieldType.GetElementType().IsPointer ||
+                        // void* pointers are unknown data types
+                        field.FieldType.GetElementType() == typeof(void) ||
+                        // <T>* pointers are linked lists, attempting to read them leads to a stack overflow exception
+                        field.FieldType.GetElementType() == typeof(T)
+                    )
+                    {
+                        field.SetValue(obj, valMap[field.Name]);
+                    }
+                    else
+                    {
+                        field.SetValue(obj, ptrMap[field.Name]);
+                    }
+                }
+                else
+                {
+                    field.SetValue(obj, valMap[field.Name]);
+                }
+            }
+
+            return obj;
         }
     }
 }
