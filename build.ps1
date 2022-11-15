@@ -40,8 +40,8 @@ try {
         $ENV:PATH = "C:\Program Files\7-Zip;${ENV:PATH}";
     }
 
-    if ( -not (Test-Path "Thirdparty\FFXIVClientStructs\bin\Release\FFXIVClientStructs.dll" )) {
-        echo "==> Building FFXIVClientStructs..."
+    if ( -not (Test-Path "OverlayPlugin.Core\Thirdparty\FFXIVClientStructs" )) {
+        echo "==> Preparing FFXIVClientStructs..."
 
         cd OverlayPlugin.Core\Thirdparty\FFXIVClientStructs
 
