@@ -42,7 +42,7 @@ namespace RainbowMage.OverlayPlugin.EventSources
             atkStageMemory = container.Resolve<IAtkStageMemory>();
             memory = container.Resolve<FFXIVMemory>();
 
-            RegisterEventHandler("getFFXIVCSAddon", (msg) =>
+            RegisterEventHandler("getFFXIVCSAddonSlow", (msg) =>
             {
                 var key = msg["name"]?.ToString();
                 if (key == null)
@@ -148,6 +148,12 @@ namespace RainbowMage.OverlayPlugin.EventSources
                 nameStr = "";
             }
             // Trim the utf8 chars at the start of the string by splitting on first space
+            // Example raw string:
+            // " "
+            // Example hex bytes:
+            // "E06A" "E069" "E060" "20"
+            // This translates to the following text in the special FFXIV UTF font
+            // "Lv" "9" "0" " "
             var parts = nameStr.Split(new char[] { ' ' }, 2);
             if (parts.Length > 1)
             {
