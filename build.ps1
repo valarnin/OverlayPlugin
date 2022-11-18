@@ -126,57 +126,10 @@ try {
                 }
 
             # Clean up the STD namespace objects
-            @"
-using System.Runtime.InteropServices;
-
-namespace FFXIVClientStructs.Global.STD {
-    [StructLayout(LayoutKind.Sequential, Size = 0x10)]
-    public unsafe struct StdMap
-    {
-        public void* Head;
-        public ulong Count;
-    }
-}
-"@ | set-content $ns\FFXIVClientStructs\STD\Map.cs
-            @"
-using System.Runtime.InteropServices;
-namespace FFXIVClientStructs.Global.STD {
-    [StructLayout(LayoutKind.Sequential, Size = 0x28)]
-    public unsafe struct StdDeque
-    {
-        public void* ContainerBase; // iterator base nonsense
-        public void** Map; // pointer to array of pointers (size MapSize) to arrays of T (size BlockSize)
-        public ulong MapSize; // size of map
-        public ulong MyOff; // offset of current first element
-        public ulong MySize; // current length 
-    }
-}
-"@ | set-content $ns\FFXIVClientStructs\STD\Deque.cs
-            @"
-using System.Runtime.InteropServices;
-namespace FFXIVClientStructs.Global.STD {
-    [StructLayout(LayoutKind.Sequential)]
-    public unsafe struct StdVector
-    {
-        public void* First;
-        public void* Last;
-        public void* End;
-    }
-}
-"@ | set-content $ns\FFXIVClientStructs\STD\Vector.cs
-            @"
-using System.Runtime.InteropServices;
-
-namespace FFXIVClientStructs.Global.FFXIV.Component.GUI {
-    [StructLayout(LayoutKind.Sequential, Size=0x18)]
-    public unsafe struct AtkLinkedList
-    {
-        public void* End;
-        public void* Start;
-        public uint Count;
-    }
-}
-"@ | set-content $ns\FFXIVClientStructs\FFXIV\Component\GUI\AtkLinkedList.cs
+            (get-content ..\..\MemoryProcessors\AtkStage\FFXIVClientStructs\Templates\STD.Map.cs) -replace '__NAMESPACE__',$ns | set-content $ns\FFXIVClientStructs\STD\Map.cs
+            (get-content ..\..\MemoryProcessors\AtkStage\FFXIVClientStructs\Templates\STD.Deque.cs) -replace '__NAMESPACE__',$ns | set-content $ns\FFXIVClientStructs\STD\Deque.cs
+            (get-content ..\..\MemoryProcessors\AtkStage\FFXIVClientStructs\Templates\STD.Vector.cs) -replace '__NAMESPACE__',$ns | set-content $ns\FFXIVClientStructs\STD\Vector.cs
+            (get-content ..\..\MemoryProcessors\AtkStage\FFXIVClientStructs\Templates\FFXIV.Component.GUI.AtkLinkedList.cs) -replace '__NAMESPACE__',$ns | set-content $ns\FFXIVClientStructs\FFXIV\Component\GUI\AtkLinkedList.cs
             }
 
         cd ..\..\..
