@@ -149,11 +149,11 @@ namespace RainbowMage.OverlayPlugin.EventSources
             }
             // Trim the utf8 chars at the start of the string by splitting on first space
             // Example raw string:
-            // " "
+            // " Player Name"
             // Example hex bytes:
-            // "E06A" "E069" "E060" "20"
+            // "E06A" "E069" "E060" "20" etc
             // This translates to the following text in the special FFXIV UTF font
-            // "Lv" "9" "0" " "
+            // "Lv" "9" "0" " " etc
             var parts = nameStr.Split(new char[] { ' ' }, 2);
             if (parts.Length > 1)
             {
