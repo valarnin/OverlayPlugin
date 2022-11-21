@@ -31,7 +31,7 @@ try {
     }
 
     if ( -not (Test-Path "OverlayPlugin.Core\Thirdparty\FFXIVClientStructs\Global" )) {
-        echo 'Error: Please run tools\fetch_deps.py'
+        echo 'Error: Please run tools\fetch_deps.py (missing "OverlayPlugin.Core\Thirdparty\FFXIVClientStructs\Global")'
         exit 1
     }
 
