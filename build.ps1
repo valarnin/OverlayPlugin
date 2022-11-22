@@ -137,8 +137,11 @@ try {
 
     if ( -not (Test-Path .\OverlayPlugin.Updater\Resources\libcurl.dll)) {
         echo "==> Building cURL..."
-        pwd
-        ls Thirdparty
+        ls Thirdparty\curl\winbuild
+        ls "$VS_PATH\VC\Auxiliary\Build\vcvarsall.bat"
+        sleep 1
+        cmd /c ('"'+"$VS_PATH\VC\Auxiliary\Build\vcvarsall.bat"+'" amd64&set')|select-string '^PATH='
+        sleep 1
 
         mkdir .\OverlayPlugin.Updater\Resources
         cd Thirdparty\curl\winbuild
