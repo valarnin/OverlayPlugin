@@ -17,7 +17,6 @@ try {
     } else {
         $VS_PATH = & "$DEFAULT_VSWHERE_PATH" -latest -property installationPath
     }
-    $VS_PATH = 'C:\Program Files (x86)\Microsoft Visual Studio\2022\Community'
 
     if ( -not (Test-Path "Thirdparty\ACT\Advanced Combat Tracker.exe" )) {
         echo 'Error: Please run tools\fetch_deps.py'
@@ -137,11 +136,6 @@ try {
 
     if ( -not (Test-Path .\OverlayPlugin.Updater\Resources\libcurl.dll)) {
         echo "==> Building cURL..."
-        ls Thirdparty\curl\winbuild
-        ls "$VS_PATH\VC\Auxiliary\Build\vcvarsall.bat"
-        sleep 1
-        cmd /c ('"'+"$VS_PATH\VC\Auxiliary\Build\vcvarsall.bat"+'" amd64&set')|select-string '^PATH='
-        sleep 1
 
         mkdir .\OverlayPlugin.Updater\Resources
         cd Thirdparty\curl\winbuild
