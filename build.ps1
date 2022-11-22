@@ -138,12 +138,10 @@ try {
     if ( -not (Test-Path .\OverlayPlugin.Updater\Resources\libcurl.dll)) {
         echo "==> Building cURL..."
         pwd
-        ls
+        ls Thirdparty
 
         mkdir .\OverlayPlugin.Updater\Resources
         cd Thirdparty\curl\winbuild
-        pwd
-        ls
 
         echo "@call `"$VS_PATH\VC\Auxiliary\Build\vcvarsall.bat`" amd64"           | Out-File -Encoding ascii tmp_build.bat
         echo "nmake /f Makefile.vc mode=dll VC=16 GEN_PDB=no DEBUG=no MACHINE=x64" | Out-File -Encoding ascii -Append tmp_build.bat
