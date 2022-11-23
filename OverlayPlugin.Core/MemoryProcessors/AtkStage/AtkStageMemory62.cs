@@ -15,7 +15,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.AtkStage
         private static int GetAtkStageSingletonAddress(TinyIoCContainer container)
         {
             var data = container.Resolve<FFXIVClientStructs.Data>();
-            return (int) data.GetClassInstanceAddress(FFXIVClientStructs.DataNamespace.Global, "Component::GUI::AtkStage");
+            return (int)data.GetClassInstanceAddress(FFXIVClientStructs.DataNamespace.Global, "Component::GUI::AtkStage");
         }
 
         public AtkStageMemory62(TinyIoCContainer container) : base(container, GetAtkStageSingletonAddress(container)) { }
