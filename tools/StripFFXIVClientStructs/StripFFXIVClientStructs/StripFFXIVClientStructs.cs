@@ -77,6 +77,7 @@ namespace StripFFXIVClientStructs
             "Agent",
             "Obsolete",
             "FixedArray",
+            "FixedSizeArray",
         };
 
         static void Main(string[] args)
@@ -120,7 +121,7 @@ namespace StripFFXIVClientStructs
                 case SyntaxKind.IdentifierName:
                     return root;
                 case SyntaxKind.Attribute:
-                    var attributeName = root.ChildNodes().First().ToString();
+                    var attributeName = root.ChildNodes().First().GetFirstToken().ToString();
                     if (!KeepAttributes.Contains(attributeName))
                     {
                         if (!DiscardAttributes.Contains(attributeName))
