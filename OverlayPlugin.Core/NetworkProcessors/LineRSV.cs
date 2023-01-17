@@ -51,7 +51,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
         private readonly int offsetMessageType;
         private readonly int offsetPacketData;
 
-        private Func<string, bool> logWriter;
+        private Func<string, DateTime, bool> logWriter;
         private FFXIVRepository ffxiv;
 
         public LineRSV(TinyIoCContainer container)
@@ -101,7 +101,8 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
                     RSVPacket.key[3] == 'v'
                 )
                 {
-                    logWriter(RSVPacket.ToString(ffxiv.GetLocaleString()));
+                    DateTime serverTime = ffxiv.EpochToDateTime(epoch);
+                    logWriter(RSVPacket.ToString(ffxiv.GetLocaleString()), serverTime);
 
                     return;
                 }
