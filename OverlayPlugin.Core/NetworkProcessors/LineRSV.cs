@@ -1,7 +1,7 @@
-using RainbowMage.OverlayPlugin.MemoryProcessors;
-using System;
+﻿using System;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using RainbowMage.OverlayPlugin.MemoryProcessors;
 
 namespace RainbowMage.OverlayPlugin.NetworkProcessors
 {
