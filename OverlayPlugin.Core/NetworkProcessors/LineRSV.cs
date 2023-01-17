@@ -80,6 +80,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             var customLogLines = container.Resolve<FFXIVCustomLogLines>();
             this.logWriter = customLogLines.RegisterCustomLogLine(new LogLineRegistryEntry()
             {
+                Name = "RSVData",
                 Source = "OverlayPlugin",
                 ID = LogFileLineID,
                 Version = 1,
