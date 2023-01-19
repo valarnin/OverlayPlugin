@@ -34,7 +34,8 @@ namespace RainbowMage.OverlayPlugin
             container.Resolve<NativeMethods>().ActiveWindowChanged += ActiveWindowChangedHandler;
             container.Resolve<NetworkParser>().OnOnlineStatusChanged += OnlineStatusChanged;
             LineInCombat lineInCombat;
-            if (container.TryResolve(out lineInCombat)) {
+            if (container.TryResolve(out lineInCombat))
+            {
                 lineInCombat.OnInCombatChanged += CombatStatusChanged;
             }
 
