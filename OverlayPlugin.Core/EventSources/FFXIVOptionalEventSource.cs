@@ -32,6 +32,17 @@ namespace RainbowMage.OverlayPlugin.EventSources
                 LogLineEvent,
             });
 
+            if (haveRepository)
+            {
+                // These events need to deliver cached values to new subscribers.
+                RegisterCachedEventTypes(new List<string> {
+                    ChangePrimaryPlayerEvent,
+                    ChangeZoneEvent,
+                    ChangeMapEvent,
+                    GameVersionEvent,
+                });
+            }
+
             ActGlobals.oFormActMain.BeforeLogLineRead += LogLineHandler;
         }
 
@@ -49,6 +60,8 @@ namespace RainbowMage.OverlayPlugin.EventSources
             {
                 try
                 {
+                    // @TODO: Should this be a customizable setting so that it can be changed per game, or somehow allow
+                    // downstream plugins to override it to change it per game?
                     var line = args.originalLogLine.Split('|');
 
                     if (int.TryParse(line[0], out int lineTypeInt))
@@ -163,6 +176,8 @@ namespace RainbowMage.OverlayPlugin.EventSources
                         break;
                 }
 
+                // @TODO: Technically this event should work fine for any game, not just FFXIV.
+                // Should it be moved to emit right after attempting the split instead?
                 DispatchEvent(JObject.FromObject(new
                 {
                     type = LogLineEvent,
