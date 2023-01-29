@@ -48,11 +48,13 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
     {
         public const uint LogFileLineID = 262;
         private ILogger logger;
+        private OverlayPluginLogLineConfig opcodeConfig;
+        private IOpcodeConfigEntry opcode = null;
         private readonly int offsetMessageType;
         private readonly int offsetPacketData;
+        private readonly FFXIVRepository ffxiv;
 
         private Func<string, DateTime, bool> logWriter;
-        private FFXIVRepository ffxiv;
 
         public LineRSV(TinyIoCContainer container)
         {
@@ -61,6 +63,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             var netHelper = container.Resolve<NetworkParser>();
             if (!ffxiv.IsFFXIVPluginPresent())
                 return;
+            opcodeConfig = container.Resolve<OverlayPluginLogLineConfig>();
             try
             {
                 var mach = Assembly.Load("Machina.FFXIV");
@@ -89,20 +92,27 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
 
         private unsafe void MessageReceived(string id, long epoch, byte[] message)
         {
-            if (message.Length < RSV_v62.structSize + offsetPacketData)
+            // Wait for network data to actually fetch opcode info from file and register log line
+            // This is because the FFXIV_ACT_Plugin's `GetGameVersion` method only returns valid data
+            // if the player is currently logged in/a network connection is active
+            if (opcode == null)
+            {
+                opcode = opcodeConfig["RSVData"];
+                if (opcode == null)
+                {
+                    return;
+                }
+            }
+
+            if (message.Length < opcode.size + offsetPacketData)
                 return;
 
             fixed (byte* buffer = message)
             {
-                RSV_v62 RSVPacket = *(RSV_v62*)&buffer[offsetPacketData];
-                if (
-                    RSVPacket.key[0] == '_' &&
-                    RSVPacket.key[1] == 'r' &&
-                    RSVPacket.key[2] == 's' &&
-                    RSVPacket.key[3] == 'v'
-                )
+                if (*(ushort*)&buffer[offsetMessageType] == opcode.opcode)
                 {
                     DateTime serverTime = ffxiv.EpochToDateTime(epoch);
+                    RSV_v62 RSVPacket = *(RSV_v62*)&buffer[offsetPacketData];
                     logWriter(RSVPacket.ToString(ffxiv.GetLocaleString()), serverTime);
 
                     return;
