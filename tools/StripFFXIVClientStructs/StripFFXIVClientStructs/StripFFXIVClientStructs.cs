@@ -242,7 +242,8 @@ namespace StripFFXIVClientStructs
                     continue;
                 }
 
-                try {
+                try
+                {
                     var tree = CSharpSyntaxTree.ParseText(File.ReadAllText(file));
                     var root = tree.GetRoot();
                     var rewriter = new SyntaxRewriter(ns);
@@ -254,7 +255,7 @@ namespace StripFFXIVClientStructs
 
                         if (!rewriter.usings.Contains(usingVal))
                         {
-                            outTree = outTree.AddUsings(new [] {
+                            outTree = outTree.AddUsings(new[] {
                                 SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(usingVal))
                             });
                         }
@@ -263,7 +264,9 @@ namespace StripFFXIVClientStructs
                     var destFile = file.Replace(path, dest);
                     Directory.CreateDirectory(Directory.GetParent(destFile).FullName);
                     File.WriteAllText(destFile, outTree.NormalizeWhitespace().ToFullString());
-                } catch (Exception e) {
+                }
+                catch (Exception e)
+                {
                     Console.WriteLine(file);
                     throw e;
                 }
@@ -332,7 +335,8 @@ namespace StripFFXIVClientStructs
             {
                 SyntaxNode lastNode = null;
                 // Check to see if the next node in parent from this one contains " : unmanaged"
-                if (node.Parent.ChildNodes().Any((node) => {
+                if (node.Parent.ChildNodes().Any((node) =>
+                {
                     if (lastNode == node && node.ToString().Contains(" : unmanaged"))
                     {
                         return true;
@@ -498,7 +502,8 @@ namespace StripFFXIVClientStructs
 
             public override SyntaxNode VisitBaseList(BaseListSyntax node)
             {
-                var types = node.Types.Where((type) => {
+                var types = node.Types.Where((type) =>
+                {
                     switch (type.ToString().Split("<")[0])
                     {
                         case "IEquatable":
