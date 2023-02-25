@@ -31,6 +31,8 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.AtkStage.FFXIVClientStructs
             yamlFilePath = Path.Combine(pluginDirectory, "resources", "FFXIVClientStructs.{0}.data.yml");
         }
 
+        // @TODO: At some point the runtime checks in this function should be moved to a compile-time test instead
+        // and this function can return `long` instead of `long?`
         public long? GetClassInstanceAddress(DataNamespace ns, string targetClass)
         {
             var curObj = GetBaseObject(ns);
