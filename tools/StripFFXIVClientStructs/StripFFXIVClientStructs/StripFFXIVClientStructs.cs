@@ -284,7 +284,7 @@ namespace StripFFXIVClientStructs
                     Directory.CreateDirectory(Directory.GetParent(destFile).FullName);
                     // Call `NormalizeWhitespace()`, otherwise Roslyn will omit whitespace between nodes randomly 🤷🏼‍
                     // Also call `ToFullString()` because sometimes it'll use the wrong output. I never figured out why this is needed.
-                    // The documentation doesn't indicate why, but sometimes it randomly returned old node text instead of replaced/udpated text?
+                    // The documentation doesn't indicate why, but sometimes it randomly returned old node text instead of replaced/updated text?
                     File.WriteAllText(destFile, outTree.NormalizeWhitespace().ToFullString());
                 }
                 catch (Exception e)
