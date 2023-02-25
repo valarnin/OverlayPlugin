@@ -18,6 +18,9 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.AtkStage.FFXIVClientStructs
         private readonly string yamlFilePath;
         private readonly Dictionary<DataNamespace, ClientStructsData> data = new Dictionary<DataNamespace, ClientStructsData>();
 
+        // @TODO: Is there some way to get this from the module instead?
+        private const long DataBaseOffset = 0x140000000;
+
         public Data(TinyIoCContainer container)
         {
             logger = container.Resolve<ILogger>();
@@ -49,7 +52,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.AtkStage.FFXIVClientStructs
                 return null;
             }
 
-            return instances[0].ea;
+            return instances[0].ea - DataBaseOffset;
         }
 
         public ClientStructsData GetBaseObject(DataNamespace ns)
