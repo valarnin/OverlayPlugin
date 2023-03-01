@@ -344,7 +344,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.AtkGui.FFXIVClientStructs
                     var elementTypeSize = Marshal.SizeOf(fixedBuffer.ElementType);
                     var elementCount = fixedBuffer.Length / elementTypeSize;
                     // Read the fixed buffer to an array
-                    
+
                     var array = Array.CreateInstance(fixedBuffer.ElementType, elementCount);
                     fixed (void* tPtr = &rawObject)
                     {
@@ -575,7 +575,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.AtkGui.FFXIVClientStructs
             Type objType = generic.GetType().GetField("First").GetType().GetElementType();
             int objSize = Marshal.SizeOf(objType);
 
-            int count = (int)(((ulong)cast.Last - (ulong)cast.First) / (ulong) objSize);
+            int count = (int)(((ulong)cast.Last - (ulong)cast.First) / (ulong)objSize);
 
             dynamic list = typeof(List<>).MakeGenericType(objType).GetConstructor(new Type[] { }).Invoke(new object[] { });
 
