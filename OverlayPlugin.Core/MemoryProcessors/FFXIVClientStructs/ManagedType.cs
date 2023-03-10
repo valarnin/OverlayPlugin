@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using Newtonsoft.Json.Linq;
 
-namespace RainbowMage.OverlayPlugin.MemoryProcessors.AtkGui.FFXIVClientStructs
+namespace RainbowMage.OverlayPlugin.MemoryProcessors.FFXIVClientStructs
 {
     /// <summary>
     /// This class acts as a proxy to FFXIV process memory, based on a struct.
