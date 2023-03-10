@@ -523,6 +523,13 @@ namespace StripFFXIVClientStructs
 
             public override SyntaxNode VisitStructDeclaration(StructDeclarationSyntax node)
             {
+                // Add `partial` modifier to all structs to allow extending them with new fields
+                if (!node.Modifiers.Any(SyntaxKind.PartialKeyword))
+                {
+                    node = node.AddModifiers(SyntaxFactory.Token(SyntaxKind.PartialKeyword));
+                    return Visit(node);
+                }
+
                 // For the topmost struct, visit all children first, so we can append the new subtypes if needed
                 if (topStruct == null)
                 {

@@ -101,6 +101,8 @@
     <Compile Include="MemoryProcessors\AtkStage\AtkStageMemory.cs" />
     <Compile Include="MemoryProcessors\AtkStage\AtkStageMemory62.cs" />
     <Compile Include="MemoryProcessors\AtkStage\AtkStageMemoryManager.cs" />
+    <Compile Include="MemoryProcessors\AtkStage\FFXIVClientStructs\Extensions\FFXIV\Client\Game\Character\Character.cs" />
+    <Compile Include="MemoryProcessors\AtkStage\FFXIVClientStructs\Extensions\FFXIV\Client\Game\Object\GameObject.cs" />
     <Compile Include="MemoryProcessors\AtkStage\FFXIVClientStructs\Data.cs" />
     <Compile Include="MemoryProcessors\AtkStage\FFXIVClientStructs\ManagedType.cs" />
     <Compile Include="MemoryProcessors\Combatant\CombatantMemory63.cs" />
