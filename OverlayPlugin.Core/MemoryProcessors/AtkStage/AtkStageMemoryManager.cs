@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using RainbowMage.OverlayPlugin.MemoryProcessors.AtkGui.FFXIVClientStructs;
+using RainbowMage.OverlayPlugin.MemoryProcessors.FFXIVClientStructs;
 
 namespace RainbowMage.OverlayPlugin.MemoryProcessors.AtkStage
 {
