@@ -2,10 +2,11 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
-using RainbowMage.OverlayPlugin.MemoryProcessors.Combatant;
 using System.Reflection;
 using System.Linq;
+using RainbowMage.OverlayPlugin.NetworkProcessors;
+using System.Collections.Generic;
+using RainbowMage.OverlayPlugin.MemoryProcessors.InCombat;
 
 namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
 {
@@ -15,7 +16,11 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
         private ILogger logger;
         private readonly FFXIVRepository ffxiv;
         private ICombatantMemory combatantMemoryManager;
+        private IInCombatMemory inCombatMemory;
         private ConcurrentDictionary<uint, CombatantStateInfo> combatantStateMap = new ConcurrentDictionary<uint, CombatantStateInfo>();
+
+        int offsetHeaderActorID;
+        int offsetHeaderLoginUserID;
 
         // Only emit a log line when this information changes every X milliseconds
         private struct CombatantChangeCriteria {
@@ -23,55 +28,55 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
             public const int PollingRate = 20;
 
             // in milliseconds
-            public const uint DelayDefault = 1000; // If any property has changed in this timeframe, a line will be written
+            public const uint InCombatDelayDefault = 1000; // If any property has changed in this timeframe, a line will be written
+            public const uint OutOfCombatDelayDefault = 5000;
 
-            public const uint DelayNameID = 0;
-            public const uint DelayPosition = 250;
-            public const uint DelayTransformationID = 0;
-            public const uint DelayWeaponID = 0;
-            public const uint DelayTargetID = 0;
+            public const uint InCombatDelayNameID = 0;
+            public const uint OutOfCombatDelayNameID = 1000;
+
+            public const uint InCombatDelayPosition = 250;
+            public const uint OutOfCombatDelayPosition = 1250;
+
+            public const uint InCombatDelayTransformationID = 0;
+            public const uint OutOfCombatDelayTransformationID = 1000;
+
+            public const uint InCombatDelayWeaponID = 0;
+            public const uint OutOfCombatDelayWeaponID = 1000;
+
+            public const uint InCombatDelayTargetID = 0;
+            public const uint OutOfCombatDelayTargetID = 1000;
 
             // in in-game distance
-            public const float DistancePosition = 5F;
+            public const float InCombatDistancePosition = 5F;
+            public const float OutOfCombatDistancePosition = 15F;
 
             // in radians
-            public const float DistanceHeading = (float)(45 * (Math.PI / 180)); // 45º turns
+            public const float InCombatDistanceHeading = (float)(45 * (Math.PI / 180)); // 45º turns
+            public const float OutOfCombatDistanceHeading = 20f; // Effectively disabled
 
-            // Check these fields for changes to determine if we should dump a full line
-            public static readonly FieldInfo[] defaultCheckFields = new FieldInfo[] {
-                // This is just every field except Effects, Distances, and specifically checked values for now, can remove as needed
-                typeof(Combatant).GetField("ID"),
-                typeof(Combatant).GetField("OwnerID"),
-                typeof(Combatant).GetField("Type"),
-                typeof(Combatant).GetField("MonsterType"),
-                typeof(Combatant).GetField("Status"),
-                typeof(Combatant).GetField("ModelStatus"),
-                typeof(Combatant).GetField("AggressionStatus"),
-                typeof(Combatant).GetField("IsTargetable"),
-                typeof(Combatant).GetField("Job"),
-                typeof(Combatant).GetField("Name"),
-                typeof(Combatant).GetField("CurrentHP"),
-                typeof(Combatant).GetField("MaxHP"),
-                typeof(Combatant).GetField("Radius"),
-                typeof(Combatant).GetField("BNpcID"),
-                typeof(Combatant).GetField("CurrentMP"),
-                typeof(Combatant).GetField("MaxMP"),
-                typeof(Combatant).GetField("Level"),
-                typeof(Combatant).GetField("WorldID"),
-                typeof(Combatant).GetField("CurrentWorldID"),
-                typeof(Combatant).GetField("NPCTargetID"),
-                typeof(Combatant).GetField("CurrentGP"),
-                typeof(Combatant).GetField("MaxGP"),
-                typeof(Combatant).GetField("CurrentCP"),
-                typeof(Combatant).GetField("MaxCP"),
-                typeof(Combatant).GetField("PCTargetID"),
-                typeof(Combatant).GetField("IsCasting1"),
-                typeof(Combatant).GetField("IsCasting2"),
-                typeof(Combatant).GetField("CastBuffID"),
-                typeof(Combatant).GetField("CastTargetID"),
-                typeof(Combatant).GetField("CastDurationCurrent"),
-                typeof(Combatant).GetField("CastDurationMax"),
+            // Check these fields for changes to determine if we should dump a full list of all changes
+            private static readonly string[] DefaultCheckFieldNames = new string[] {
+                "OwnerID",
+                "Type",
+                "MonsterType",
+                "Status",
+                "ModelStatus",
+                "AggressionStatus",
+                "IsTargetable",
+                "Name",
+                "Radius",
+                "BNpcID",
+                "CurrentMP",
+                "IsCasting1",
             };
+
+            // Fields that should be written out for add or full list of changes
+            public static readonly FieldInfo[] AllFields = typeof(Combatant).GetFields()
+                // Exclude "Effects" due to object complexity, "ID" because that's always printed
+                .Where((field) => field.Name != "Effects" && field.Name != "ID")
+                .ToArray();
+
+            public static readonly FieldInfo[] DefaultCheckFields = AllFields.Where((f) => DefaultCheckFieldNames.Contains(f.Name)).ToArray();
         }
 
         private class CombatantStateInfo
@@ -88,7 +93,10 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
         {
             logger = container.Resolve<ILogger>();
             ffxiv = container.Resolve<FFXIVRepository>();
+            if (!ffxiv.IsFFXIVPluginPresent())
+                return;
             combatantMemoryManager = container.Resolve<ICombatantMemory>();
+            inCombatMemory = container.Resolve<IInCombatMemory>();
             var customLogLines = container.Resolve<FFXIVCustomLogLines>();
             this.logWriter = customLogLines.RegisterCustomLogLine(new LogLineRegistryEntry()
             {
@@ -97,6 +105,24 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
                 ID = LogFileLineID,
                 Version = 1,
             });
+
+            var netHelper = container.Resolve<NetworkParser>();
+            try
+            {
+                var mach = Assembly.Load("Machina.FFXIV");
+                var msgHeaderType = mach.GetType("Machina.FFXIV.Headers.Server_MessageHeader");
+                offsetHeaderActorID = netHelper.GetOffset(msgHeaderType, "ActorID");
+                offsetHeaderLoginUserID = netHelper.GetOffset(msgHeaderType, "LoginUserID");
+                ffxiv.RegisterNetworkParser(MessageReceived);
+            }
+            catch (System.IO.FileNotFoundException)
+            {
+                logger.Log(LogLevel.Error, Resources.NetworkParserNoFfxiv);
+            }
+            catch (Exception e)
+            {
+                logger.Log(LogLevel.Error, Resources.NetworkParserInitException, e);
+            }
 
             cancellationToken = new CancellationTokenSource();
 
@@ -113,118 +139,13 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
 
         private void PollCombatants()
         {
-            try {
-                while (!cancellationToken.IsCancellationRequested)
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                try
                 {
                     var now = DateTime.Now;
 
-                    var combatants = combatantMemoryManager.GetCombatantList();
-
-                    // Check combatants currently in memory first
-                    foreach (var combatant in combatants)
-                    {
-                        // If this is a new combatant, always write a line for it
-                        if (!combatantStateMap.ContainsKey(combatant.ID))
-                        {
-                            combatantStateMap[combatant.ID] = new CombatantStateInfo(){
-                                lastUpdated = now,
-                                combatant = combatant,
-                            };
-                            WriteLine(CombatantMemoryChangeType.Add, combatant.ID, JObject.FromObject(combatant).ToString(Newtonsoft.Json.Formatting.None));
-                            continue;
-                        }
-
-                        var oldCombatant = combatantStateMap[combatant.ID].combatant;
-                        var lastUpdatedDiff = (now - combatantStateMap[combatant.ID].lastUpdated).TotalMilliseconds;
-
-                        if (lastUpdatedDiff > CombatantChangeCriteria.DelayDefault)
-                        {
-                            var changed = false;
-                            foreach(var fi in CombatantChangeCriteria.defaultCheckFields)
-                            {
-                                var oldVal = fi.GetValue(oldCombatant);
-                                var newVal = fi.GetValue(combatant);
-                                // There's some weird behavior with just using `==` or `.Equals` here, where two UInt32 values that are the same somehow aren't.
-                                if (oldVal is IComparable)
-                                {
-                                    if (((IComparable)oldVal).CompareTo(newVal) != 0)
-                                    {
-                                        changed = true;
-                                        break;
-                                    }
-                                }
-                                if (!oldVal.Equals(newVal))
-                                {
-                                    changed = true;
-                                    break;
-                                }
-                            }
-                            if (changed)
-                            {
-                                combatantStateMap[combatant.ID] = new CombatantStateInfo()
-                                {
-                                    lastUpdated = now,
-                                    combatant = combatant,
-                                };
-                                WriteLine(CombatantMemoryChangeType.PartialChange, combatant.ID, JObject.FromObject(combatant).ToString(Newtonsoft.Json.Formatting.None));
-                            }
-                        }
-
-                        // Check for partial change lines at the end
-                        // Batch these partial changes
-                        var obj = new JObject();
-                        if (lastUpdatedDiff > CombatantChangeCriteria.DelayNameID && combatant.BNpcNameID != oldCombatant.BNpcNameID)
-                        {
-                            obj["BNpcNameID"] = combatant.BNpcNameID;
-                        }
-                        if (lastUpdatedDiff > CombatantChangeCriteria.DelayTransformationID && combatant.TransformationId != oldCombatant.TransformationId)
-                        {
-                            obj["TransformationId"] = combatant.TransformationId;
-                        }
-                        if (lastUpdatedDiff > CombatantChangeCriteria.DelayWeaponID && combatant.WeaponId != oldCombatant.WeaponId)
-                        {
-                            obj["WeaponId"] = combatant.WeaponId;
-                        }
-                        if (lastUpdatedDiff > CombatantChangeCriteria.DelayTargetID && combatant.TargetID != oldCombatant.TargetID)
-                        {
-                            obj["TargetID"] = combatant.TargetID;
-                        }
-                        if (lastUpdatedDiff > CombatantChangeCriteria.DelayPosition)
-                        {
-                            if (
-                                (combatant.PosX != oldCombatant.PosX || combatant.PosY != oldCombatant.PosY || combatant.PosZ != oldCombatant.PosZ)
-                                && Math.Sqrt(Math.Pow(combatant.PosX, 2) + Math.Pow(combatant.PosY, 2) + Math.Pow(combatant.PosZ, 2)) > CombatantChangeCriteria.DistancePosition)
-                            {
-                                obj["PosX"] = combatant.PosX;
-                                obj["PosY"] = combatant.PosY;
-                                obj["PosZ"] = combatant.PosZ;
-                            } else if (
-                                combatant.Heading != oldCombatant.Heading
-                                && Math.Abs((combatant.Heading + Math.PI) - (oldCombatant.Heading + Math.PI)) > CombatantChangeCriteria.DistanceHeading)
-                            {
-                                obj["Heading"] = combatant.Heading;
-                            }
-                        }
-                        if (obj.Count > 0)
-                        {
-                            combatantStateMap[combatant.ID] = new CombatantStateInfo()
-                            {
-                                lastUpdated = now,
-                                combatant = combatant,
-                            };
-                            WriteLine(CombatantMemoryChangeType.FullChange, combatant.ID, obj.ToString(Newtonsoft.Json.Formatting.None));
-                        }
-                    }
-
-                    // Any combatants no longer in memory, signify that they were removed
-                    foreach (var ID in combatantStateMap.Keys)
-                    {
-                        if (!combatants.Any((c) => c.ID == ID))
-                        {
-                            combatantStateMap.TryRemove(ID, out var _);
-                            WriteLine(CombatantMemoryChangeType.Remove, ID, "");
-                        }
-                    }
+                    CheckCombatants(now);
 
                     // Wait for next poll
                     var delay = CombatantChangeCriteria.PollingRate - (int)Math.Ceiling((DateTime.Now - now).TotalMilliseconds);
@@ -238,23 +159,204 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
                         Thread.Sleep(CombatantChangeCriteria.PollingRate);
                     }
                 }
-            } catch (Exception e) {
-                logger.Log(LogLevel.Debug, $"LineCombatant: Exception: {e}");
+                catch (Exception e)
+                {
+                    logger.Log(LogLevel.Debug, $"LineCombatant: Exception: {e}");
+                }
             }
+        }
+
+        private void CheckCombatants(DateTime now, params uint[] filter)
+        {
+            bool inCombat = inCombatMemory.GetInCombat();
+            var combatants = combatantMemoryManager.GetCombatantList();
+
+            // Check combatants currently in memory first
+            foreach (var combatant in combatants)
+            {
+                // If we're only checking specific actor IDs, filter to those
+                if (filter.Length > 0 && !filter.Contains(combatant.ID))
+                {
+                    continue;
+                }
+
+                // If this is a new combatant, always write a line for it
+                if (!combatantStateMap.ContainsKey(combatant.ID))
+                {
+                    combatantStateMap[combatant.ID] = new CombatantStateInfo()
+                    {
+                        lastUpdated = now,
+                        combatant = combatant,
+                    };
+                    WriteLine(
+                        CombatantMemoryChangeType.Add,
+                        combatant.ID,
+                        string.Join("", CombatantChangeCriteria.AllFields.Select((fi) => FormatFieldChange(fi, combatant))));
+                    continue;
+                }
+
+                var oldCombatant = combatantStateMap[combatant.ID].combatant;
+                var lastUpdatedDiff = (now - combatantStateMap[combatant.ID].lastUpdated).TotalMilliseconds;
+                var changed = new List<FieldInfo>();
+
+                // Check the general case of "if any mapped field has changed since the default delay duration, write all changes"
+                var delayDefault = inCombat ? CombatantChangeCriteria.InCombatDelayDefault : CombatantChangeCriteria.OutOfCombatDelayDefault;
+                if (lastUpdatedDiff > delayDefault)
+                {
+                    foreach (var fi in CombatantChangeCriteria.DefaultCheckFields)
+                    {
+                        var oldVal = fi.GetValue(oldCombatant);
+                        var newVal = fi.GetValue(combatant);
+                        // There's some weird behavior with just using `==` or `.Equals` here, where two UInt32 values that are the same somehow aren't.
+                        if (oldVal is IComparable)
+                        {
+                            if (((IComparable)oldVal).CompareTo(newVal) != 0)
+                            {
+                                changed.Add(fi);
+                                continue;
+                            }
+                        }
+                        if (!oldVal.Equals(newVal))
+                        {
+                            changed.Add(fi);
+                            continue;
+                        }
+                    }
+                    if (changed.Count > 0)
+                    {
+                        combatantStateMap[combatant.ID] = new CombatantStateInfo()
+                        {
+                            lastUpdated = now,
+                            combatant = combatant,
+                        };
+                        WriteLine(
+                            CombatantMemoryChangeType.Change,
+                            combatant.ID,
+                            string.Join("", changed.Select((fi) => FormatFieldChange(fi, combatant))));
+                        continue;
+                    }
+                }
+
+                // Check for partial change lines with a delay less than the default delay
+                // Batch these partial changes
+                var delayNameID = inCombat ? CombatantChangeCriteria.InCombatDelayNameID : CombatantChangeCriteria.OutOfCombatDelayNameID;
+                if (lastUpdatedDiff > delayNameID && combatant.BNpcNameID != oldCombatant.BNpcNameID)
+                {
+                    changed.Add(combatant.GetType().GetField("BNpcNameID"));
+                }
+                var delayTransformationID = inCombat ? CombatantChangeCriteria.InCombatDelayTransformationID : CombatantChangeCriteria.OutOfCombatDelayTransformationID;
+                if (lastUpdatedDiff > delayTransformationID && combatant.TransformationId != oldCombatant.TransformationId)
+                {
+                    changed.Add(combatant.GetType().GetField("TransformationId"));
+                }
+                var delayWeaponID = inCombat ? CombatantChangeCriteria.InCombatDelayWeaponID : CombatantChangeCriteria.OutOfCombatDelayWeaponID;
+                if (lastUpdatedDiff > delayWeaponID && combatant.WeaponId != oldCombatant.WeaponId)
+                {
+                    changed.Add(combatant.GetType().GetField("WeaponId"));
+                }
+                var delayTargetID = inCombat ? CombatantChangeCriteria.InCombatDelayTargetID : CombatantChangeCriteria.OutOfCombatDelayTargetID;
+                if (lastUpdatedDiff > delayTargetID && combatant.TargetID != oldCombatant.TargetID)
+                {
+                    changed.Add(combatant.GetType().GetField("TargetID"));
+                }
+                var delayPosition = inCombat ? CombatantChangeCriteria.InCombatDelayPosition : CombatantChangeCriteria.OutOfCombatDelayPosition;
+                if (lastUpdatedDiff > delayPosition)
+                {
+                    if ((combatant.PosX != oldCombatant.PosX || combatant.PosY != oldCombatant.PosY || combatant.PosZ != oldCombatant.PosZ))
+                    {
+                        var dist = Math.Sqrt(Math.Pow(combatant.PosX, 2) + Math.Pow(combatant.PosY, 2) + Math.Pow(combatant.PosZ, 2));
+                        var checkDist = inCombat ? CombatantChangeCriteria.InCombatDistancePosition : CombatantChangeCriteria.OutOfCombatDistancePosition;
+                        if (dist > checkDist)
+                        {
+                            changed.Add(combatant.GetType().GetField("PosX"));
+                            changed.Add(combatant.GetType().GetField("PosY"));
+                            changed.Add(combatant.GetType().GetField("PosZ"));
+                        }
+                    }
+                    else if (combatant.Heading != oldCombatant.Heading)
+                    {
+                        var diff = Math.Abs((combatant.Heading + Math.PI) - (oldCombatant.Heading + Math.PI));
+                        var checkDiff = inCombat ? CombatantChangeCriteria.InCombatDistanceHeading : CombatantChangeCriteria.OutOfCombatDistanceHeading;
+                        if (diff > checkDiff)
+                        {
+                            changed.Add(combatant.GetType().GetField("Heading"));
+                        }
+                    }
+                }
+                if (changed.Count > 0)
+                {
+                    combatantStateMap[combatant.ID] = new CombatantStateInfo()
+                    {
+                        lastUpdated = now,
+                        combatant = combatant,
+                    };
+                    WriteLine(
+                        CombatantMemoryChangeType.Change,
+                        combatant.ID,
+                        string.Join("", changed.Select((fi) => FormatFieldChange(fi, combatant))));
+                }
+            }
+
+            // Any combatants no longer in memory, signify that they were removed
+            foreach (var ID in combatantStateMap.Keys)
+            {
+                // If we're filtering, only consider removing those in the filters
+                if (filter.Length > 0 && !filter.Contains(ID))
+                {
+                    continue;
+                }
+                if (!combatants.Any((c) => c.ID == ID))
+                {
+                    combatantStateMap.TryRemove(ID, out var _);
+                    WriteLine(CombatantMemoryChangeType.Remove, ID, "");
+                }
+            }
+        }
+
+        private string FormatFieldChange(FieldInfo info, Combatant combatant)
+        {
+            if (info.Name == "PCTargetID" || info.Name == "NPCTargetID" || info.Name == "BNpcNameID" || info.Name == "BNpcID" || info.Name == "TargetID" || info.Name == "OwnerID")
+            {
+                return $"|{info.Name}|0x{info.GetValue(combatant):X}";
+            }
+
+            if (info.FieldType.IsEnum)
+            {
+                return $"|{info.Name}|{Convert.ChangeType(info.GetValue(combatant), Enum.GetUnderlyingType(info.FieldType))}";
+            }
+            return $"|{info.Name}|{info.GetValue(combatant)}";
         }
 
         private void WriteLine(CombatantMemoryChangeType type, uint combatantID, string info)
         {
-            var line = $"{type}|{combatantID:X8}|{info}";
+            var line = $"{type}|{combatantID:X8}{info}";
             logWriter(line, ffxiv.GetServerTimestamp());
+        }
+
+        private unsafe void MessageReceived(string id, long epoch, byte[] message)
+        {
+            fixed (byte* buffer = message)
+            {
+                uint actorID = *(uint*)&buffer[offsetHeaderActorID];
+                uint loginID = *(uint*)&buffer[offsetHeaderLoginUserID];
+                // Only check if we're not looking at a packet that's for just us
+                if (actorID != loginID)
+                {
+                    DateTime serverTime = ffxiv.EpochToDateTime(epoch);
+                    // Also only check if we're beyond the default delay for this ID, or if this ID doesn't exist yet
+                    if (!combatantStateMap.ContainsKey(actorID) || (serverTime - combatantStateMap[actorID].lastUpdated).TotalMilliseconds > CombatantChangeCriteria.InCombatDelayDefault)
+                    {
+                        CheckCombatants(serverTime, actorID);
+                    }
+                }
+            }
         }
 
         private enum CombatantMemoryChangeType
         {
             Add,
             Remove,
-            FullChange,
-            PartialChange,
+            Change,
         }
     }
 }
