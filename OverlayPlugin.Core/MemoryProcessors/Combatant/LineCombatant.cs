@@ -315,7 +315,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
 
         private string FormatFieldChange(FieldInfo info, Combatant combatant)
         {
-            if (info.Name == "PCTargetID" || info.Name == "NPCTargetID" || info.Name == "BNpcNameID" || info.Name == "BNpcID" || info.Name == "TargetID" || info.Name == "OwnerID")
+            if (info.Name == "PCTargetID" || info.Name == "NPCTargetID" || info.Name == "BNpcNameID" || info.Name == "BNpcID" || info.Name == "TargetID" || info.Name == "OwnerID" || info.Name == "CastTargetID")
             {
                 return $"|{info.Name}|0x{info.GetValue(combatant):X}";
             }
