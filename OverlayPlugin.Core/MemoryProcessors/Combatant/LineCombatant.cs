@@ -7,6 +7,7 @@ using System.Linq;
 using RainbowMage.OverlayPlugin.NetworkProcessors;
 using System.Collections.Generic;
 using RainbowMage.OverlayPlugin.MemoryProcessors.InCombat;
+using System.Collections.ObjectModel;
 
 namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
 {
@@ -77,6 +78,23 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
                 .ToArray();
 
             public static readonly FieldInfo[] DefaultCheckFields = AllFields.Where((f) => DefaultCheckFieldNames.Contains(f.Name)).ToArray();
+
+            private static object GetDefault(Type type)
+            {
+                if (type.IsValueType)
+                {
+                    return Activator.CreateInstance(type);
+                }
+                if (type == typeof(string))
+                {
+                    return string.Empty;
+                }
+                return null;
+            }
+
+            public static readonly ReadOnlyDictionary<Type, object> DefaultValues = 
+                new ReadOnlyDictionary<Type, object>(
+                    AllFields.Select((fi) => fi.FieldType).Distinct().ToDictionary((t) => t, (t) => GetDefault(t)));
         }
 
         private class CombatantStateInfo
@@ -191,7 +209,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
                     WriteLine(
                         CombatantMemoryChangeType.Add,
                         combatant.ID,
-                        string.Join("", CombatantChangeCriteria.AllFields.Select((fi) => FormatFieldChange(fi, combatant))));
+                        string.Join("", CombatantChangeCriteria.AllFields.Select((fi) => FormatFieldChange(fi, combatant, true))));
                     continue;
                 }
 
@@ -262,15 +280,29 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
                 var delayPosition = inCombat ? CombatantChangeCriteria.InCombatDelayPosition : CombatantChangeCriteria.OutOfCombatDelayPosition;
                 if (lastUpdatedDiff > delayPosition)
                 {
-                    if ((combatant.PosX != oldCombatant.PosX || combatant.PosY != oldCombatant.PosY || combatant.PosZ != oldCombatant.PosZ))
+                    // This check seems redundant but it's less expensive than the check below against distance
+                    // so it uses less CPU
+                    if (combatant.PosX != oldCombatant.PosX || combatant.PosY != oldCombatant.PosY || combatant.PosZ != oldCombatant.PosZ)
                     {
-                        var dist = Math.Sqrt(Math.Pow(combatant.PosX, 2) + Math.Pow(combatant.PosY, 2) + Math.Pow(combatant.PosZ, 2));
+                        var dist = Math.Sqrt(
+                            Math.Pow(combatant.PosX - oldCombatant.PosX, 2)
+                            + Math.Pow(combatant.PosY - oldCombatant.PosY, 2)
+                            + Math.Pow(combatant.PosZ - oldCombatant.PosZ, 2));
                         var checkDist = inCombat ? CombatantChangeCriteria.InCombatDistancePosition : CombatantChangeCriteria.OutOfCombatDistancePosition;
                         if (dist > checkDist)
                         {
-                            changed.Add(combatant.GetType().GetField("PosX"));
-                            changed.Add(combatant.GetType().GetField("PosY"));
-                            changed.Add(combatant.GetType().GetField("PosZ"));
+                            if (combatant.PosX != oldCombatant.PosX)
+                            {
+                                changed.Add(combatant.GetType().GetField("PosX"));
+                            }
+                            if (combatant.PosY != oldCombatant.PosY)
+                            {
+                                changed.Add(combatant.GetType().GetField("PosY"));
+                            }
+                            if (combatant.PosZ != oldCombatant.PosZ)
+                            {
+                                changed.Add(combatant.GetType().GetField("PosZ"));
+                            }
                         }
                     }
                     else if (combatant.Heading != oldCombatant.Heading)
@@ -313,18 +345,34 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
             }
         }
 
-        private string FormatFieldChange(FieldInfo info, Combatant combatant)
+        private string FormatFieldChange(FieldInfo info, Combatant combatant, bool skipDefaultValues = false)
         {
+            var value = info.GetValue(combatant);
+
+            if (value == null)
+            {
+                if (skipDefaultValues)
+                {
+                    return string.Empty;
+                }
+                return $"|{info.Name}|NULL";
+            }
+
+            if (skipDefaultValues && value.Equals(CombatantChangeCriteria.DefaultValues[info.FieldType]))
+            {
+                return string.Empty;
+            }
+
             if (info.Name == "PCTargetID" || info.Name == "NPCTargetID" || info.Name == "BNpcNameID" || info.Name == "BNpcID" || info.Name == "TargetID" || info.Name == "OwnerID" || info.Name == "CastTargetID")
             {
-                return $"|{info.Name}|0x{info.GetValue(combatant):X}";
+                return $"|{info.Name}|0x{value:X}";
             }
 
             if (info.FieldType.IsEnum)
             {
-                return $"|{info.Name}|{Convert.ChangeType(info.GetValue(combatant), Enum.GetUnderlyingType(info.FieldType))}";
+                return $"|{info.Name}|{Convert.ChangeType(value, Enum.GetUnderlyingType(info.FieldType))}";
             }
-            return $"|{info.Name}|{info.GetValue(combatant)}";
+            return $"|{info.Name}|{value}";
         }
 
         private void WriteLine(CombatantMemoryChangeType type, uint combatantID, string info)
