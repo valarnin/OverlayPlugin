@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Reflection;
-using System.Linq;
-using RainbowMage.OverlayPlugin.NetworkProcessors;
-using System.Collections.Generic;
 using RainbowMage.OverlayPlugin.MemoryProcessors.InCombat;
-using System.Collections.ObjectModel;
+using RainbowMage.OverlayPlugin.NetworkProcessors;
 
 namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
 {
@@ -24,7 +24,8 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
         int offsetHeaderLoginUserID;
 
         // Only emit a log line when this information changes every X milliseconds
-        private struct CombatantChangeCriteria {
+        private struct CombatantChangeCriteria
+        {
             // in milliseconds
             public const int PollingRate = 20;
 
@@ -92,7 +93,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
                 return null;
             }
 
-            public static readonly ReadOnlyDictionary<Type, object> DefaultValues = 
+            public static readonly ReadOnlyDictionary<Type, object> DefaultValues =
                 new ReadOnlyDictionary<Type, object>(
                     AllFields.Select((fi) => fi.FieldType).Distinct().ToDictionary((t) => t, (t) => GetDefault(t)));
         }
