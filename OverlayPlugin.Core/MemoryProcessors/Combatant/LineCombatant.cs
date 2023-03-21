@@ -17,7 +17,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
         private ILogger logger;
         private readonly FFXIVRepository ffxiv;
         private ICombatantMemory combatantMemoryManager;
-        private IInCombatMemory inCombatMemory;
+        private bool inCombat = false;
         private ConcurrentDictionary<uint, CombatantStateInfo> combatantStateMap = new ConcurrentDictionary<uint, CombatantStateInfo>();
 
         int offsetHeaderActorID;
@@ -30,52 +30,55 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
             public const int PollingRate = 20;
 
             // in milliseconds
-            public const uint InCombatDelayDefault = 1000; // If any property has changed in this timeframe, a line will be written
-            public const uint OutOfCombatDelayDefault = 5000;
+            public const uint DelayDefault = 1000; // If any property has changed in this timeframe, a line will be written
 
-            public const uint InCombatDelayNameID = 0;
-            public const uint OutOfCombatDelayNameID = 1000;
+            public const uint DelayNameID = 0;
 
-            public const uint InCombatDelayPosition = 250;
-            public const uint OutOfCombatDelayPosition = 1250;
+            public const uint DelayPosition = 250;
 
-            public const uint InCombatDelayTransformationID = 0;
-            public const uint OutOfCombatDelayTransformationID = 1000;
+            public const uint DelayTransformationID = 0;
 
-            public const uint InCombatDelayWeaponID = 0;
-            public const uint OutOfCombatDelayWeaponID = 1000;
+            public const uint DelayWeaponID = 0;
 
-            public const uint InCombatDelayTargetID = 0;
-            public const uint OutOfCombatDelayTargetID = 1000;
+            public const uint DelayTargetID = 0;
 
-            // in in-game distance
-            public const float InCombatDistancePosition = 5F;
-            public const float OutOfCombatDistancePosition = 15F;
+            // in in-game distance, squared
+            public static readonly double DistancePosition = Math.Pow(5, 2);
 
             // in radians
-            public const float InCombatDistanceHeading = (float)(45 * (Math.PI / 180)); // 45º turns
-            public const float OutOfCombatDistanceHeading = 20f; // Effectively disabled
+            public const float DistanceHeading = (float)(45 * (Math.PI / 180)); // 45º turns
 
             // Check these fields for changes to determine if we should dump a full list of all changes
             private static readonly string[] DefaultCheckFieldNames = new string[] {
-                "OwnerID",
-                "Type",
-                "MonsterType",
-                "Status",
-                "ModelStatus",
-                "AggressionStatus",
-                "IsTargetable",
-                "Name",
-                "Radius",
-                "BNpcID",
-                "CurrentMP",
-                "IsCasting1",
+                nameof(Combatant.OwnerID),
+                nameof(Combatant.Type),
+                nameof(Combatant.MonsterType),
+                nameof(Combatant.Status),
+                nameof(Combatant.ModelStatus),
+                nameof(Combatant.AggressionStatus),
+                nameof(Combatant.IsTargetable),
+                nameof(Combatant.Name),
+                nameof(Combatant.Radius),
+                nameof(Combatant.BNpcID),
+                nameof(Combatant.CurrentMP),
+                nameof(Combatant.IsCasting1),
+            };
+
+            private static readonly string[] IgnoreFieldNames = new string[] {
+                // "ID" is always printed
+                nameof(Combatant.ID),
+                // Exclude "Effects" due to object complexity
+                nameof(Combatant.Effects),
+                // Excluded due to not being useful
+                // TODO: Maybe this should just add any field flagged as NonSerialized, if additional fields are added?
+                nameof(Combatant.RawEffectiveDistance),
+                // Excluded due to being included in many, many other lines
+                nameof(Combatant.CurrentHP),
             };
 
             // Fields that should be written out for add or full list of changes
             public static readonly FieldInfo[] AllFields = typeof(Combatant).GetFields()
-                // Exclude "Effects" due to object complexity, "ID" because that's always printed
-                .Where((field) => field.Name != "Effects" && field.Name != "ID")
+                .Where((field) => !IgnoreFieldNames.Contains(field.Name))
                 .ToArray();
 
             public static readonly FieldInfo[] DefaultCheckFields = AllFields.Where((f) => DefaultCheckFieldNames.Contains(f.Name)).ToArray();
@@ -115,7 +118,19 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
             if (!ffxiv.IsFFXIVPluginPresent())
                 return;
             combatantMemoryManager = container.Resolve<ICombatantMemory>();
-            inCombatMemory = container.Resolve<IInCombatMemory>();
+            container.Resolve<LineInCombat>().OnInCombatChanged += (sender, args) =>
+            {
+                if (args.InGameCombatChanged)
+                {
+                    // Clear the state map when leaving combat
+                    if (!args.InGameCombat)
+                    {
+                        WriteClearLine();
+                        combatantStateMap.Clear();
+                    }
+                    inCombat = args.InGameCombat;
+                }
+            };
             var customLogLines = container.Resolve<FFXIVCustomLogLines>();
             this.logWriter = customLogLines.RegisterCustomLogLine(new LogLineRegistryEntry()
             {
@@ -164,7 +179,10 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
                 {
                     var now = DateTime.Now;
 
-                    CheckCombatants(now);
+                    if (inCombat)
+                    {
+                        CheckCombatants(now);
+                    }
 
                     // Wait for next poll
                     var delay = CombatantChangeCriteria.PollingRate - (int)Math.Ceiling((DateTime.Now - now).TotalMilliseconds);
@@ -187,7 +205,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
 
         private void CheckCombatants(DateTime now, params uint[] filter)
         {
-            bool inCombat = inCombatMemory.GetInCombat();
             var combatants = combatantMemoryManager.GetCombatantList();
 
             // Check combatants currently in memory first
@@ -218,12 +235,71 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
                 var lastUpdatedDiff = (now - combatantStateMap[combatant.ID].lastUpdated).TotalMilliseconds;
                 var changed = new List<FieldInfo>();
 
+                // Check for partial change lines with a delay less than the default delay
+                // Batch these partial changes
+                if (lastUpdatedDiff > CombatantChangeCriteria.DelayNameID && combatant.BNpcNameID != oldCombatant.BNpcNameID)
+                {
+                    changed.Add(combatant.GetType().GetField(nameof(Combatant.BNpcNameID)));
+                }
+                if (lastUpdatedDiff > CombatantChangeCriteria.DelayTransformationID && combatant.TransformationId != oldCombatant.TransformationId)
+                {
+                    changed.Add(combatant.GetType().GetField(nameof(Combatant.TransformationId)));
+                }
+                if (lastUpdatedDiff > CombatantChangeCriteria.DelayWeaponID && combatant.WeaponId != oldCombatant.WeaponId)
+                {
+                    changed.Add(combatant.GetType().GetField(nameof(Combatant.WeaponId)));
+                }
+                if (lastUpdatedDiff > CombatantChangeCriteria.DelayTargetID && combatant.TargetID != oldCombatant.TargetID)
+                {
+                    changed.Add(combatant.GetType().GetField(nameof(Combatant.TargetID)));
+                }
+                if (lastUpdatedDiff > CombatantChangeCriteria.DelayPosition)
+                {
+
+                    var writePosition = false;
+                    // This check seems redundant but it's less expensive than the check below against distance
+                    // so it uses less CPU
+                    if (combatant.PosX != oldCombatant.PosX || combatant.PosY != oldCombatant.PosY || combatant.PosZ != oldCombatant.PosZ)
+                    {
+                        var dist = Math.Pow(combatant.PosX - oldCombatant.PosX, 2)
+                            + Math.Pow(combatant.PosY - oldCombatant.PosY, 2)
+                            + Math.Pow(combatant.PosZ - oldCombatant.PosZ, 2);
+                        if (dist > CombatantChangeCriteria.DistancePosition)
+                        {
+                            writePosition = true;
+                        }
+                    }
+                    else if (combatant.Heading != oldCombatant.Heading)
+                    {
+                        double PI2 = Math.PI * 2;
+                        double normalizedAngle = combatant.Heading - oldCombatant.Heading;
+                        normalizedAngle += Math.Abs((normalizedAngle > Math.PI) ? -PI2 : (normalizedAngle < -Math.PI) ? PI2 : 0);
+                        if (normalizedAngle >= CombatantChangeCriteria.DistanceHeading)
+                        {
+                            writePosition = true;
+                        }
+                    }
+
+                    // If any position data has changed, write all position data
+                    if (writePosition)
+                    {
+                        changed.Add(combatant.GetType().GetField(nameof(Combatant.PosX)));
+                        changed.Add(combatant.GetType().GetField(nameof(Combatant.PosY)));
+                        changed.Add(combatant.GetType().GetField(nameof(Combatant.PosZ)));
+                        changed.Add(combatant.GetType().GetField(nameof(Combatant.Heading)));
+                    }
+                }
+
                 // Check the general case of "if any mapped field has changed since the default delay duration, write all changes"
-                var delayDefault = inCombat ? CombatantChangeCriteria.InCombatDelayDefault : CombatantChangeCriteria.OutOfCombatDelayDefault;
-                if (lastUpdatedDiff > delayDefault)
+                // Also run this check if any other field has changed
+                if (lastUpdatedDiff > CombatantChangeCriteria.DelayDefault || changed.Count > 0)
                 {
                     foreach (var fi in CombatantChangeCriteria.DefaultCheckFields)
                     {
+                        if (changed.Contains(fi))
+                        {
+                            continue;
+                        }
                         var oldVal = fi.GetValue(oldCombatant);
                         var newVal = fi.GetValue(combatant);
                         // There's some weird behavior with just using `==` or `.Equals` here, where two UInt32 values that are the same somehow aren't.
@@ -238,84 +314,10 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
                         if (!oldVal.Equals(newVal))
                         {
                             changed.Add(fi);
-                            continue;
                         }
-                    }
-                    if (changed.Count > 0)
-                    {
-                        combatantStateMap[combatant.ID] = new CombatantStateInfo()
-                        {
-                            lastUpdated = now,
-                            combatant = combatant,
-                        };
-                        WriteLine(
-                            CombatantMemoryChangeType.Change,
-                            combatant.ID,
-                            string.Join("", changed.Select((fi) => FormatFieldChange(fi, combatant))));
-                        continue;
                     }
                 }
 
-                // Check for partial change lines with a delay less than the default delay
-                // Batch these partial changes
-                var delayNameID = inCombat ? CombatantChangeCriteria.InCombatDelayNameID : CombatantChangeCriteria.OutOfCombatDelayNameID;
-                if (lastUpdatedDiff > delayNameID && combatant.BNpcNameID != oldCombatant.BNpcNameID)
-                {
-                    changed.Add(combatant.GetType().GetField("BNpcNameID"));
-                }
-                var delayTransformationID = inCombat ? CombatantChangeCriteria.InCombatDelayTransformationID : CombatantChangeCriteria.OutOfCombatDelayTransformationID;
-                if (lastUpdatedDiff > delayTransformationID && combatant.TransformationId != oldCombatant.TransformationId)
-                {
-                    changed.Add(combatant.GetType().GetField("TransformationId"));
-                }
-                var delayWeaponID = inCombat ? CombatantChangeCriteria.InCombatDelayWeaponID : CombatantChangeCriteria.OutOfCombatDelayWeaponID;
-                if (lastUpdatedDiff > delayWeaponID && combatant.WeaponId != oldCombatant.WeaponId)
-                {
-                    changed.Add(combatant.GetType().GetField("WeaponId"));
-                }
-                var delayTargetID = inCombat ? CombatantChangeCriteria.InCombatDelayTargetID : CombatantChangeCriteria.OutOfCombatDelayTargetID;
-                if (lastUpdatedDiff > delayTargetID && combatant.TargetID != oldCombatant.TargetID)
-                {
-                    changed.Add(combatant.GetType().GetField("TargetID"));
-                }
-                var delayPosition = inCombat ? CombatantChangeCriteria.InCombatDelayPosition : CombatantChangeCriteria.OutOfCombatDelayPosition;
-                if (lastUpdatedDiff > delayPosition)
-                {
-                    // This check seems redundant but it's less expensive than the check below against distance
-                    // so it uses less CPU
-                    if (combatant.PosX != oldCombatant.PosX || combatant.PosY != oldCombatant.PosY || combatant.PosZ != oldCombatant.PosZ)
-                    {
-                        var dist = Math.Sqrt(
-                            Math.Pow(combatant.PosX - oldCombatant.PosX, 2)
-                            + Math.Pow(combatant.PosY - oldCombatant.PosY, 2)
-                            + Math.Pow(combatant.PosZ - oldCombatant.PosZ, 2));
-                        var checkDist = inCombat ? CombatantChangeCriteria.InCombatDistancePosition : CombatantChangeCriteria.OutOfCombatDistancePosition;
-                        if (dist > checkDist)
-                        {
-                            if (combatant.PosX != oldCombatant.PosX)
-                            {
-                                changed.Add(combatant.GetType().GetField("PosX"));
-                            }
-                            if (combatant.PosY != oldCombatant.PosY)
-                            {
-                                changed.Add(combatant.GetType().GetField("PosY"));
-                            }
-                            if (combatant.PosZ != oldCombatant.PosZ)
-                            {
-                                changed.Add(combatant.GetType().GetField("PosZ"));
-                            }
-                        }
-                    }
-                    else if (combatant.Heading != oldCombatant.Heading)
-                    {
-                        var diff = Math.Abs((combatant.Heading + Math.PI) - (oldCombatant.Heading + Math.PI));
-                        var checkDiff = inCombat ? CombatantChangeCriteria.InCombatDistanceHeading : CombatantChangeCriteria.OutOfCombatDistanceHeading;
-                        if (diff > checkDiff)
-                        {
-                            changed.Add(combatant.GetType().GetField("Heading"));
-                        }
-                    }
-                }
                 if (changed.Count > 0)
                 {
                     combatantStateMap[combatant.ID] = new CombatantStateInfo()
@@ -366,7 +368,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
 
             if (info.Name == "PCTargetID" || info.Name == "NPCTargetID" || info.Name == "BNpcNameID" || info.Name == "BNpcID" || info.Name == "TargetID" || info.Name == "OwnerID" || info.Name == "CastTargetID")
             {
-                return $"|{info.Name}|0x{value:X}";
+                return $"|{info.Name}|{value:X}";
             }
 
             if (info.FieldType.IsEnum)
@@ -374,6 +376,11 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
                 return $"|{info.Name}|{Convert.ChangeType(value, Enum.GetUnderlyingType(info.FieldType))}";
             }
             return $"|{info.Name}|{value}";
+        }
+
+        private void WriteClearLine()
+        {
+            logWriter($"{CombatantMemoryChangeType.Clear}", ffxiv.GetServerTimestamp());
         }
 
         private void WriteLine(CombatantMemoryChangeType type, uint combatantID, string info)
@@ -384,18 +391,22 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
 
         private unsafe void MessageReceived(string id, long epoch, byte[] message)
         {
-            fixed (byte* buffer = message)
+            if (inCombat)
             {
-                uint actorID = *(uint*)&buffer[offsetHeaderActorID];
-                uint loginID = *(uint*)&buffer[offsetHeaderLoginUserID];
-                // Only check if we're not looking at a packet that's for just us
-                if (actorID != loginID)
+                fixed (byte* buffer = message)
                 {
-                    DateTime serverTime = ffxiv.EpochToDateTime(epoch);
-                    // Also only check if we're beyond the default delay for this ID, or if this ID doesn't exist yet
-                    if (!combatantStateMap.ContainsKey(actorID) || (serverTime - combatantStateMap[actorID].lastUpdated).TotalMilliseconds > CombatantChangeCriteria.InCombatDelayDefault)
+                    uint actorID = *(uint*)&buffer[offsetHeaderActorID];
+                    uint loginID = *(uint*)&buffer[offsetHeaderLoginUserID];
+                    // Only check if we're not looking at a packet that's for just us
+                    if (actorID != loginID)
                     {
-                        CheckCombatants(serverTime, actorID);
+                        DateTime serverTime = ffxiv.EpochToDateTime(epoch);
+                        // Also only check if we're beyond the default delay for this ID, or if this ID doesn't exist yet
+                        // This check is in place to avoid reading memory every packet, excessively
+                        if (!combatantStateMap.ContainsKey(actorID) || (serverTime - combatantStateMap[actorID].lastUpdated).TotalMilliseconds > CombatantChangeCriteria.DelayDefault)
+                        {
+                            CheckCombatants(serverTime, actorID);
+                        }
                     }
                 }
             }
@@ -406,6 +417,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
             Add,
             Remove,
             Change,
+            Clear,
         }
     }
 }
