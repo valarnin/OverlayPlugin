@@ -32,15 +32,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
             // in milliseconds
             public const uint DelayDefault = 1000; // If any property has changed in this timeframe, a line will be written
 
-            public const uint DelayNameID = 0;
-
             public const uint DelayPosition = 250;
-
-            public const uint DelayTransformationID = 0;
-
-            public const uint DelayWeaponID = 0;
-
-            public const uint DelayTargetID = 0;
 
             // in in-game distance, squared
             public static readonly double DistancePosition = Math.Pow(5, 2);
@@ -48,21 +40,27 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
             // in radians
             public const float DistanceHeading = (float)(45 * (Math.PI / 180)); // 45º turns
 
-            // Check these fields for changes to determine if we should dump a full list of all changes
-            private static readonly string[] DefaultCheckFieldNames = new string[] {
-                nameof(Combatant.OwnerID),
-                nameof(Combatant.Type),
-                nameof(Combatant.MonsterType),
-                nameof(Combatant.Status),
-                nameof(Combatant.ModelStatus),
-                nameof(Combatant.AggressionStatus),
-                nameof(Combatant.IsTargetable),
-                nameof(Combatant.Name),
-                nameof(Combatant.Radius),
-                nameof(Combatant.BNpcID),
-                nameof(Combatant.CurrentMP),
-                nameof(Combatant.IsCasting1),
-            };
+            public static ReadOnlyDictionary<FieldInfo, uint> CheckFieldDelay = new ReadOnlyDictionary<FieldInfo, uint>(new Dictionary<FieldInfo, uint>(){
+                // Default delay threshold
+                { typeof(Combatant).GetField(nameof(Combatant.OwnerID)),          DelayDefault },
+                { typeof(Combatant).GetField(nameof(Combatant.Type)),             DelayDefault },
+                { typeof(Combatant).GetField(nameof(Combatant.MonsterType)),      DelayDefault },
+                { typeof(Combatant).GetField(nameof(Combatant.Status)),           DelayDefault },
+                { typeof(Combatant).GetField(nameof(Combatant.AggressionStatus)), DelayDefault },
+                { typeof(Combatant).GetField(nameof(Combatant.IsTargetable)),     DelayDefault },
+                { typeof(Combatant).GetField(nameof(Combatant.Name)),             DelayDefault },
+                { typeof(Combatant).GetField(nameof(Combatant.Radius)),           DelayDefault },
+                { typeof(Combatant).GetField(nameof(Combatant.BNpcID)),           DelayDefault },
+                { typeof(Combatant).GetField(nameof(Combatant.CurrentMP)),        DelayDefault },
+                { typeof(Combatant).GetField(nameof(Combatant.IsCasting1)),       DelayDefault },
+
+                // No delay threshold
+                { typeof(Combatant).GetField(nameof(Combatant.BNpcNameID)),       0 },
+                { typeof(Combatant).GetField(nameof(Combatant.TransformationId)), 0 },
+                { typeof(Combatant).GetField(nameof(Combatant.WeaponId)),         0 },
+                { typeof(Combatant).GetField(nameof(Combatant.TargetID)),         0 },
+                { typeof(Combatant).GetField(nameof(Combatant.ModelStatus)),      0 },
+            });
 
             private static readonly string[] IgnoreFieldNames = new string[] {
                 // "ID" is always printed
@@ -80,8 +78,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
             public static readonly FieldInfo[] AllFields = typeof(Combatant).GetFields()
                 .Where((field) => !IgnoreFieldNames.Contains(field.Name))
                 .ToArray();
-
-            public static readonly FieldInfo[] DefaultCheckFields = AllFields.Where((f) => DefaultCheckFieldNames.Contains(f.Name)).ToArray();
 
             private static object GetDefault(Type type)
             {
@@ -235,24 +231,8 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
                 var lastUpdatedDiff = (now - combatantStateMap[combatant.ID].lastUpdated).TotalMilliseconds;
                 var changed = new List<FieldInfo>();
 
-                // Check for partial change lines with a delay less than the default delay
-                // Batch these partial changes
-                if (lastUpdatedDiff > CombatantChangeCriteria.DelayNameID && combatant.BNpcNameID != oldCombatant.BNpcNameID)
-                {
-                    changed.Add(combatant.GetType().GetField(nameof(Combatant.BNpcNameID)));
-                }
-                if (lastUpdatedDiff > CombatantChangeCriteria.DelayTransformationID && combatant.TransformationId != oldCombatant.TransformationId)
-                {
-                    changed.Add(combatant.GetType().GetField(nameof(Combatant.TransformationId)));
-                }
-                if (lastUpdatedDiff > CombatantChangeCriteria.DelayWeaponID && combatant.WeaponId != oldCombatant.WeaponId)
-                {
-                    changed.Add(combatant.GetType().GetField(nameof(Combatant.WeaponId)));
-                }
-                if (lastUpdatedDiff > CombatantChangeCriteria.DelayTargetID && combatant.TargetID != oldCombatant.TargetID)
-                {
-                    changed.Add(combatant.GetType().GetField(nameof(Combatant.TargetID)));
-                }
+                // Check position/heading first since it has a custom delay timing with threshold
+                // and custom behavior (all position data is written)
                 if (lastUpdatedDiff > CombatantChangeCriteria.DelayPosition)
                 {
 
@@ -290,36 +270,35 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
                     }
                 }
 
-                // Check the general case of "if any mapped field has changed since the default delay duration, write all changes"
-                // Also run this check if any other field has changed
-                if (lastUpdatedDiff > CombatantChangeCriteria.DelayDefault || changed.Count > 0)
+                // Check the general case of "if any mapped field has changed since the specified delay duration, queue a change line"
+                // But only if we don't already have a queued change line
+                if (changed.Count == 0)
                 {
-                    foreach (var fi in CombatantChangeCriteria.DefaultCheckFields)
+                    foreach (var fi in CombatantChangeCriteria.CheckFieldDelay)
                     {
-                        if (changed.Contains(fi))
+                        if (fi.Value <= lastUpdatedDiff && ValueNotEqual(fi.Key, oldCombatant, combatant))
                         {
-                            continue;
-                        }
-                        var oldVal = fi.GetValue(oldCombatant);
-                        var newVal = fi.GetValue(combatant);
-                        // There's some weird behavior with just using `==` or `.Equals` here, where two UInt32 values that are the same somehow aren't.
-                        if (oldVal is IComparable)
-                        {
-                            if (((IComparable)oldVal).CompareTo(newVal) != 0)
-                            {
-                                changed.Add(fi);
-                                continue;
-                            }
-                        }
-                        if (!oldVal.Equals(newVal))
-                        {
-                            changed.Add(fi);
+                            changed.Add(fi.Key);
                         }
                     }
                 }
 
                 if (changed.Count > 0)
                 {
+                    // Check all fields for changes, since we're writing a change line
+                    foreach (var fi in CombatantChangeCriteria.AllFields)
+                    {
+                        // Don't reprocess an already checked line that we know has a change
+                        if (changed.Contains(fi))
+                        {
+                            continue;
+                        }
+                        if (ValueNotEqual(fi, oldCombatant, combatant))
+                        {
+                            changed.Add(fi);
+                        }
+                    }
+
                     combatantStateMap[combatant.ID] = new CombatantStateInfo()
                     {
                         lastUpdated = now,
@@ -346,6 +325,25 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
                     WriteLine(CombatantMemoryChangeType.Remove, ID, "");
                 }
             }
+        }
+
+        private bool ValueNotEqual(FieldInfo fi, Combatant oldCombatant, Combatant combatant)
+        {
+            var oldVal = fi.GetValue(oldCombatant);
+            var newVal = fi.GetValue(combatant);
+            // There's some weird behavior with just using `==` or `.Equals` here, where two UInt32 values that are the same somehow aren't.
+            if (oldVal is IComparable)
+            {
+                if (((IComparable)oldVal).CompareTo(newVal) != 0)
+                {
+                    return false;
+                }
+            }
+            if (!oldVal.Equals(newVal))
+            {
+                return false;
+            }
+            return true;
         }
 
         private string FormatFieldChange(FieldInfo info, Combatant combatant, bool skipDefaultValues = false)
