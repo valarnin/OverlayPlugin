@@ -72,6 +72,20 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
                 nameof(Combatant.RawEffectiveDistance),
                 // Excluded due to being included in many, many other lines
                 nameof(Combatant.CurrentHP),
+
+                // These are not currently written to but exclude them in case they're updated upstream properly in the future
+                nameof(Combatant.Distance),
+                nameof(Combatant.EffectiveDistance),
+
+                // These fields are calculated and can be determined downstream by consumers if needed
+                nameof(Combatant.TargetID),
+                nameof(Combatant.IsTargetable),
+
+                // CP and GP are pointless since this is currently restricted to combat-only.
+                nameof(Combatant.CurrentCP),
+                nameof(Combatant.MaxCP),
+                nameof(Combatant.CurrentGP),
+                nameof(Combatant.MaxGP),
             };
 
             // Fields that should be written out for add or full list of changes
@@ -373,6 +387,13 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
             {
                 return $"|{info.Name}|{Convert.ChangeType(value, Enum.GetUnderlyingType(info.FieldType))}";
             }
+
+            // Format numbers to 4 decimal places, to prevent scientific notation
+            if (info.FieldType == typeof(Single) || info.FieldType == typeof(Double))
+            {
+                return $"|{info.Name}|{value:F4}";
+            }
+
             return $"|{info.Name}|{value}";
         }
 
