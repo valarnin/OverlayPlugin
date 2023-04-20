@@ -24,43 +24,91 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
         int offsetHeaderLoginUserID;
 
         // Only emit a log line when this information changes every X milliseconds
-        private struct CombatantChangeCriteria
+        private class CombatantChangeCriteria
         {
             // in milliseconds
             public const int PollingRate = 20;
 
-            // in milliseconds
-            public const uint DelayDefault = 1000; // If any property has changed in this timeframe, a line will be written
+            public class CriteriaData
+            {
+                // in milliseconds
+                public uint DelayDefault; // If any property has changed in this timeframe, a line will be written
+                public uint DelayPosition;
+                // in in-game distance, squared
+                public double DistancePosition;
+                // in radians
+                public float DistanceHeading;
+                public ReadOnlyDictionary<FieldInfo, uint> CheckFieldDelay;
+            }
 
-            public const uint DelayPosition = 250;
+            public static CriteriaData Criteria(bool inCombat)
+            {
+                return inCombat ? InCombatCriteria : OutOfCombatCriteria;
+            }
 
-            // in in-game distance, squared
-            public static readonly double DistancePosition = Math.Pow(5, 2);
+            private const uint InCombatDelayDefault = 1000;
 
-            // in radians
-            public const float DistanceHeading = (float)(45 * (Math.PI / 180)); // 45º turns
+            public static CriteriaData InCombatCriteria = new CriteriaData()
+            {
+                DelayDefault = InCombatDelayDefault,
+                DelayPosition = 250,
+                DistancePosition = Math.Pow(5, 2),
+                DistanceHeading = (float)(45 * (Math.PI / 180)), // 45º turns
 
-            public static ReadOnlyDictionary<FieldInfo, uint> CheckFieldDelay = new ReadOnlyDictionary<FieldInfo, uint>(new Dictionary<FieldInfo, uint>(){
-                // Default delay threshold
-                { typeof(Combatant).GetField(nameof(Combatant.OwnerID)),          DelayDefault },
-                { typeof(Combatant).GetField(nameof(Combatant.Type)),             DelayDefault },
-                { typeof(Combatant).GetField(nameof(Combatant.MonsterType)),      DelayDefault },
-                { typeof(Combatant).GetField(nameof(Combatant.Status)),           DelayDefault },
-                { typeof(Combatant).GetField(nameof(Combatant.AggressionStatus)), DelayDefault },
-                { typeof(Combatant).GetField(nameof(Combatant.IsTargetable)),     DelayDefault },
-                { typeof(Combatant).GetField(nameof(Combatant.Name)),             DelayDefault },
-                { typeof(Combatant).GetField(nameof(Combatant.Radius)),           DelayDefault },
-                { typeof(Combatant).GetField(nameof(Combatant.BNpcID)),           DelayDefault },
-                { typeof(Combatant).GetField(nameof(Combatant.CurrentMP)),        DelayDefault },
-                { typeof(Combatant).GetField(nameof(Combatant.IsCasting1)),       DelayDefault },
+                CheckFieldDelay = new ReadOnlyDictionary<FieldInfo, uint>(new Dictionary<FieldInfo, uint>(){
+                    // Default delay threshold
+                    { typeof(Combatant).GetField(nameof(Combatant.OwnerID)),          InCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.Type)),             InCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.MonsterType)),      InCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.Status)),           InCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.AggressionStatus)), InCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.IsTargetable)),     InCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.Name)),             InCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.Radius)),           InCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.BNpcID)),           InCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.CurrentMP)),        InCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.IsCasting1)),       InCombatDelayDefault },
 
-                // No delay threshold
-                { typeof(Combatant).GetField(nameof(Combatant.BNpcNameID)),       0 },
-                { typeof(Combatant).GetField(nameof(Combatant.TransformationId)), 0 },
-                { typeof(Combatant).GetField(nameof(Combatant.WeaponId)),         0 },
-                { typeof(Combatant).GetField(nameof(Combatant.TargetID)),         0 },
-                { typeof(Combatant).GetField(nameof(Combatant.ModelStatus)),      0 },
-            });
+                    // No delay threshold
+                    { typeof(Combatant).GetField(nameof(Combatant.BNpcNameID)),       0 },
+                    { typeof(Combatant).GetField(nameof(Combatant.TransformationId)), 0 },
+                    { typeof(Combatant).GetField(nameof(Combatant.WeaponId)),         0 },
+                    { typeof(Combatant).GetField(nameof(Combatant.TargetID)),         0 },
+                    { typeof(Combatant).GetField(nameof(Combatant.ModelStatus)),      0 },
+                }),
+            };
+
+            private const uint OutOfCombatDelayDefault = 5000;
+
+            public static CriteriaData OutOfCombatCriteria = new CriteriaData()
+            {
+                DelayDefault = OutOfCombatDelayDefault,
+                DelayPosition = 1250,
+                DistancePosition = Math.Pow(15, 2),
+                DistanceHeading = 20f, // Effectively disabled
+
+                CheckFieldDelay = new ReadOnlyDictionary<FieldInfo, uint>(new Dictionary<FieldInfo, uint>(){
+                    // Default delay threshold
+                    { typeof(Combatant).GetField(nameof(Combatant.OwnerID)),          OutOfCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.Type)),             OutOfCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.MonsterType)),      OutOfCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.Status)),           OutOfCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.AggressionStatus)), OutOfCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.IsTargetable)),     OutOfCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.Name)),             OutOfCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.Radius)),           OutOfCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.BNpcID)),           OutOfCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.CurrentMP)),        OutOfCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.IsCasting1)),       OutOfCombatDelayDefault },
+
+                    // No delay threshold
+                    { typeof(Combatant).GetField(nameof(Combatant.BNpcNameID)),       1000 },
+                    { typeof(Combatant).GetField(nameof(Combatant.TransformationId)), 1000 },
+                    { typeof(Combatant).GetField(nameof(Combatant.WeaponId)),         1000 },
+                    { typeof(Combatant).GetField(nameof(Combatant.TargetID)),         1000 },
+                    { typeof(Combatant).GetField(nameof(Combatant.ModelStatus)),      1000 },
+                }),
+            };
 
             private static readonly string[] IgnoreFieldNames = new string[] {
                 // "ID" is always printed
@@ -132,12 +180,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
             {
                 if (args.InGameCombatChanged)
                 {
-                    // Clear the state map when leaving combat
-                    if (!args.InGameCombat)
-                    {
-                        WriteClearLine();
-                        combatantStateMap.Clear();
-                    }
                     inCombat = args.InGameCombat;
                 }
             };
@@ -217,6 +259,8 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
         {
             var combatants = combatantMemoryManager.GetCombatantList();
 
+            var criteria = CombatantChangeCriteria.Criteria(inCombat);
+
             // Check combatants currently in memory first
             foreach (var combatant in combatants)
             {
@@ -247,7 +291,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
 
                 // Check position/heading first since it has a custom delay timing with threshold
                 // and custom behavior (all position data is written)
-                if (lastUpdatedDiff > CombatantChangeCriteria.DelayPosition)
+                if (lastUpdatedDiff > criteria.DelayPosition)
                 {
 
                     var writePosition = false;
@@ -258,7 +302,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
                         var dist = Math.Pow(combatant.PosX - oldCombatant.PosX, 2)
                             + Math.Pow(combatant.PosY - oldCombatant.PosY, 2)
                             + Math.Pow(combatant.PosZ - oldCombatant.PosZ, 2);
-                        if (dist > CombatantChangeCriteria.DistancePosition)
+                        if (dist > criteria.DistancePosition)
                         {
                             writePosition = true;
                         }
@@ -268,7 +312,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
                         double PI2 = Math.PI * 2;
                         double normalizedAngle = combatant.Heading - oldCombatant.Heading;
                         normalizedAngle += Math.Abs((normalizedAngle > Math.PI) ? -PI2 : (normalizedAngle < -Math.PI) ? PI2 : 0);
-                        if (normalizedAngle >= CombatantChangeCriteria.DistanceHeading)
+                        if (normalizedAngle >= criteria.DistanceHeading)
                         {
                             writePosition = true;
                         }
@@ -288,7 +332,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
                 // But only if we don't already have a queued change line
                 if (changed.Count == 0)
                 {
-                    foreach (var fi in CombatantChangeCriteria.CheckFieldDelay)
+                    foreach (var fi in criteria.CheckFieldDelay)
                     {
                         if (fi.Value <= lastUpdatedDiff && ValueNotEqual(fi.Key, oldCombatant, combatant))
                         {
@@ -397,11 +441,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
             return $"|{info.Name}|{value}";
         }
 
-        private void WriteClearLine()
-        {
-            logWriter($"{CombatantMemoryChangeType.Clear}", ffxiv.GetServerTimestamp());
-        }
-
         private void WriteLine(CombatantMemoryChangeType type, uint combatantID, string info)
         {
             var line = $"{type}|{combatantID:X8}{info}";
@@ -410,22 +449,20 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
 
         private unsafe void MessageReceived(string id, long epoch, byte[] message)
         {
-            if (inCombat)
+            fixed (byte* buffer = message)
             {
-                fixed (byte* buffer = message)
+                uint actorID = *(uint*)&buffer[offsetHeaderActorID];
+                uint loginID = *(uint*)&buffer[offsetHeaderLoginUserID];
+                // Only check if we're not looking at a packet that's for just us
+                if (actorID != loginID)
                 {
-                    uint actorID = *(uint*)&buffer[offsetHeaderActorID];
-                    uint loginID = *(uint*)&buffer[offsetHeaderLoginUserID];
-                    // Only check if we're not looking at a packet that's for just us
-                    if (actorID != loginID)
+                    DateTime serverTime = ffxiv.EpochToDateTime(epoch);
+                    var delayDefault = CombatantChangeCriteria.Criteria(inCombat).DelayDefault;
+                    // Also only check if we're beyond the default delay for this ID, or if this ID doesn't exist yet
+                    // This check is in place to avoid reading memory every packet, excessively
+                    if (!combatantStateMap.ContainsKey(actorID) || (serverTime - combatantStateMap[actorID].lastUpdated).TotalMilliseconds > delayDefault)
                     {
-                        DateTime serverTime = ffxiv.EpochToDateTime(epoch);
-                        // Also only check if we're beyond the default delay for this ID, or if this ID doesn't exist yet
-                        // This check is in place to avoid reading memory every packet, excessively
-                        if (!combatantStateMap.ContainsKey(actorID) || (serverTime - combatantStateMap[actorID].lastUpdated).TotalMilliseconds > CombatantChangeCriteria.DelayDefault)
-                        {
-                            CheckCombatants(serverTime, actorID);
-                        }
+                        CheckCombatants(serverTime, actorID);
                     }
                 }
             }
@@ -436,7 +473,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
             Add,
             Remove,
             Change,
-            Clear,
         }
     }
 }
