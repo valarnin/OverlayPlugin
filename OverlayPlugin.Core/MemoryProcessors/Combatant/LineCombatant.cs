@@ -358,7 +358,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
                         lastUpdated = now,
                         combatant = combatant,
                     };
-                    
+
                     WriteLine(
                         CombatantMemoryChangeType.Change,
                         combatant.ID,
