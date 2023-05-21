@@ -411,7 +411,9 @@ namespace RainbowMage.HtmlRenderer
 
         static bool initialized = false;
         private static string CachePath = null;
-        private static readonly string[] CacheFolders = new string[] { "blob_storage", "Cache", "Code Cache", "GPUCache" };
+
+        // Delete all folders which don't potentially contain overlay configuration information
+        private static readonly string[] CacheFolders = new string[] { "Cache", "Code Cache", "GPUCache" };
 
         public static void Initialize(string pluginDirectory, string appDataDirectory, bool reportErrors)
         {
