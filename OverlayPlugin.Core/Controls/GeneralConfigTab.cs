@@ -181,6 +181,7 @@ namespace RainbowMage.OverlayPlugin
         {
             container.Resolve<PluginMain>().ClearCacheOnRestart();
             btnClearCEFCache.Enabled = false;
+            Updater.Updater.TryRestartACT(true, Resources.ClearCacheRestart);
         }
     }
 }
