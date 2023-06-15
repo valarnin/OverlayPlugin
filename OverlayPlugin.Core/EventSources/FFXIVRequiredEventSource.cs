@@ -231,8 +231,13 @@ namespace RainbowMage.OverlayPlugin.EventSources
             // Raw job id.
             public int job;
             public int level;
-            // In immediate party (true), vs in alliance (false).
+            // @deprecated, please use partyType
             public bool inParty;
+            public long contentID;
+            public byte flags;
+            public uint objectID;
+            public ushort territoryType;
+            public string partyType;
         }
 
         private int GetPartyType(PluginCombatant combatant)
@@ -253,37 +258,40 @@ namespace RainbowMage.OverlayPlugin.EventSources
 
         private void DispatchPartyChangeEvent()
         {
+            // TODO: Figure out what alliance the player is actually in, and vary a/b/c/d/e/f here
+            // Until this is tracked down, just treat the player's party as A and go from there
             List<PartyMember> result = new List<PartyMember>(24);
-            foreach (var member in cachedPartyList.partyMembers)
+
+            List<string> remainingAlliances = new List<string>() {
+                "Alliance A",
+                "Alliance B",
+                "Alliance C",
+                "Alliance D",
+                "Alliance E",
+                "Alliance F",
+            };
+
+            var currentAlliance = remainingAlliances.First();
+            remainingAlliances.RemoveAt(0);
+
+            if ((cachedPartyList.allianceFlags & 0x1) == 0)
             {
-                result.Add(new PartyMember
+                if (cachedPartyList.memberCount <= 1)
                 {
-                    id = $"{member.objectID:X}",
-                    name = member.name,
-                    worldId = member.homeWorld,
-                    job = member.classJob,
-                    level = member.level,
-                    inParty = true,
-                });
-            }
-            var allianceMembers = cachedPartyList.allianceAMembers
-                .Concat(cachedPartyList.allianceBMembers)
-                .Concat(cachedPartyList.allianceCMembers)
-                .Concat(cachedPartyList.allianceDMembers)
-                .Concat(cachedPartyList.allianceEMembers)
-                .Where(member => member != null && (member.flags & 0x1) == 0x1);
-            foreach (var member in allianceMembers)
-            {
-                result.Add(new PartyMember
+                    currentAlliance = "Solo";
+                }
+                else
                 {
-                    id = $"{member.objectID:X}",
-                    name = member.name,
-                    worldId = member.homeWorld,
-                    job = member.classJob,
-                    level = member.level,
-                    inParty = false,
-                });
+                    currentAlliance = "Party";
+                }
             }
+
+            BuildPartyMemberResults(result, cachedPartyList.partyMembers, currentAlliance, true);
+            BuildPartyMemberResults(result, cachedPartyList.allianceAMembers, remainingAlliances[0], true);
+            BuildPartyMemberResults(result, cachedPartyList.allianceBMembers, remainingAlliances[1], true);
+            BuildPartyMemberResults(result, cachedPartyList.allianceCMembers, remainingAlliances[2], true);
+            BuildPartyMemberResults(result, cachedPartyList.allianceDMembers, remainingAlliances[3], true);
+            BuildPartyMemberResults(result, cachedPartyList.allianceEMembers, remainingAlliances[4], true);
 
             Log(LogLevel.Debug, "party list: {0}", JObject.FromObject(new { party = result }).ToString());
 
@@ -291,8 +299,41 @@ namespace RainbowMage.OverlayPlugin.EventSources
             {
                 type = PartyChangedEvent,
                 party = result,
-                partyStructure = cachedPartyList
+                partyInfo = new
+                {
+                    cachedPartyList.allianceFlags,
+                    cachedPartyList.memberCount,
+                    cachedPartyList.partyId,
+                    cachedPartyList.partyId_2,
+                    cachedPartyList.partyLeaderIndex,
+                },
             }));
+        }
+
+        private void BuildPartyMemberResults(List<PartyMember> result, PartyListEntry[] members, string currentAlliance, bool inParty)
+        {
+            foreach (var member in members)
+            {
+                if (member == null || (member.flags & 0x1) != 0x1)
+                {
+                    continue;
+                }
+
+                result.Add(new PartyMember
+                {
+                    id = $"{member.objectID:X}",
+                    name = member.name,
+                    worldId = member.homeWorld,
+                    job = member.classJob,
+                    level = member.level,
+                    inParty = inParty,
+                    contentID = member.contentID,
+                    flags = member.flags,
+                    objectID = member.objectID,
+                    territoryType = member.territoryType,
+                    partyType = currentAlliance,
+                });
+            }
         }
 
         public override Control CreateConfigControl()
@@ -335,6 +376,10 @@ namespace RainbowMage.OverlayPlugin.EventSources
             if (newParty.memberCount == 0)
             {
                 var currentPlayer = combatantMemory.GetSelfCombatant();
+                if (currentPlayer == null)
+                {
+                    return;
+                }
                 newParty.memberCount = 1;
                 newParty.partyMembers = new PartyListEntry[] {
                     new PartyListEntry() {
