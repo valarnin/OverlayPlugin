@@ -258,8 +258,7 @@ namespace RainbowMage.OverlayPlugin.EventSources
 
         private void DispatchPartyChangeEvent()
         {
-            // TODO: Figure out what alliance the player is actually in, and vary a/b/c/d/e/f here
-            // Until this is tracked down, just treat the player's party as A and go from there
+            // TODO: We know how to detect alliance A/B. Need to verify alliance C/D/E/F
             List<PartyMember> result = new List<PartyMember>(24);
 
             List<string> remainingAlliances = new List<string>() {
@@ -271,9 +270,7 @@ namespace RainbowMage.OverlayPlugin.EventSources
                 "Alliance F",
             };
 
-            var currentAlliance = remainingAlliances.First();
-            remainingAlliances.RemoveAt(0);
-
+            string currentAlliance;
             if ((cachedPartyList.allianceFlags & 0x1) == 0)
             {
                 if (cachedPartyList.memberCount <= 1)
@@ -284,6 +281,22 @@ namespace RainbowMage.OverlayPlugin.EventSources
                 {
                     currentAlliance = "Party";
                 }
+            }
+            else if ((cachedPartyList.Unk_3D40 & 0x100) == 0x100)
+            {
+                currentAlliance = remainingAlliances[0];
+                remainingAlliances.RemoveAt(0);
+            }
+            else if ((cachedPartyList.Unk_3D40 & 0x1) == 0x1)
+            {
+                currentAlliance = remainingAlliances[1];
+                remainingAlliances.RemoveAt(1);
+            }
+            else
+            {
+                currentAlliance = remainingAlliances[2];
+                remainingAlliances.RemoveAt(2);
+                Log(LogLevel.Warning, $"Could not detect player alliance, value {cachedPartyList.Unk_3D40:X8}");
             }
 
             BuildPartyMemberResults(result, cachedPartyList.partyMembers, currentAlliance, true);
@@ -306,6 +319,8 @@ namespace RainbowMage.OverlayPlugin.EventSources
                     cachedPartyList.partyId,
                     cachedPartyList.partyId_2,
                     cachedPartyList.partyLeaderIndex,
+
+                    cachedPartyList.Unk_3D40,
                 },
             }));
         }
@@ -455,7 +470,7 @@ namespace RainbowMage.OverlayPlugin.EventSources
             {
                 var newMember = newList[i];
                 var oldMember = oldList[i];
-                if (newMember == null)
+                if (newMember == null || oldMember == null)
                 {
                     // If one of these is null and the other isn't, they've changed, dispatch the event
                     if (newMember != oldMember)

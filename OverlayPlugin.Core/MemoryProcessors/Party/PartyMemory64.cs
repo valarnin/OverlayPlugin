@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using FFXIVClientStructs.Global.FFXIV.Client.Game.Group;
-using FFXIVClientStructs.Global.FFXIV.Component.GUI;
 using RainbowMage.OverlayPlugin.MemoryProcessors.FFXIVClientStructs;
 
 namespace RainbowMage.OverlayPlugin.MemoryProcessors.Party
@@ -60,6 +59,8 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Party
                 partyLeaderIndex = groupManager1.PartyLeaderIndex,
                 memberCount = groupManager1.MemberCount,
                 allianceFlags = groupManager1.AllianceFlags,
+
+                Unk_3D40 = groupManager1.Unk_3D40,
 
                 partyMembers = partyMembers,
                 allianceAMembers = allianceAMembers,

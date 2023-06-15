@@ -32,6 +32,8 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Party
         public byte memberCount;
         public byte allianceFlags;
 
+        public uint Unk_3D40;
+
         public PartyListEntry[] partyMembers;
         public PartyListEntry[] allianceAMembers;
         public PartyListEntry[] allianceBMembers;
