@@ -292,6 +292,11 @@ namespace RainbowMage.OverlayPlugin.EventSources
                 currentAlliance = remainingAlliances[1];
                 remainingAlliances.RemoveAt(1);
             }
+            else if ((cachedPartyList.Unk_3D40 & 0x10000) == 0x10000)
+            {
+                currentAlliance = remainingAlliances[2];
+                remainingAlliances.RemoveAt(2);
+            }
             else
             {
                 currentAlliance = remainingAlliances[2];
@@ -322,6 +327,9 @@ namespace RainbowMage.OverlayPlugin.EventSources
 
                     cachedPartyList.Unk_3D40,
                 },
+#if DEBUG
+                debugPartyStruct = cachedPartyList,
+#endif
             }));
         }
 
