@@ -60,7 +60,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Party
                 memberCount = groupManager1.MemberCount,
                 allianceFlags = groupManager1.AllianceFlags,
 
-                Unk_3D40 = groupManager1.Unk_3D40,
+                currentPartyFlags = groupManager1.Unk_3D40,
 
                 partyMembers = partyMembers,
                 alliance1Members = alliance1Members,
@@ -99,8 +99,8 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Party
                     x = member.X,
                     y = member.Y,
                     z = member.Z,
-                    contentID = member.ContentID,
-                    objectID = member.ObjectID,
+                    contentId = member.ContentID,
+                    objectId = member.ObjectID,
                     currentHP = member.CurrentHP,
                     maxHP = member.MaxHP,
                     currentMP = member.CurrentMP,

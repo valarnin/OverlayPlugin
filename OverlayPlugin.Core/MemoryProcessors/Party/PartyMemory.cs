@@ -9,8 +9,8 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Party
         public float x;
         public float y;
         public float z;
-        public long contentID;
-        public uint objectID;
+        public long contentId;
+        public uint objectId;
         public uint currentHP;
         public uint maxHP;
         public ushort currentMP;
@@ -32,7 +32,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Party
         public byte memberCount;
         public byte allianceFlags;
 
-        public uint Unk_3D40;
+        public uint currentPartyFlags;
 
         public PartyListEntry[] partyMembers;
         public PartyListEntry[] alliance1Members;

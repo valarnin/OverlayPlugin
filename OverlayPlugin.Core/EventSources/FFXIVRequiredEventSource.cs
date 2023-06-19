@@ -233,13 +233,13 @@ namespace RainbowMage.OverlayPlugin.EventSources
             public int level;
             // @deprecated, please use partyType
             public bool inParty;
-            public long contentID;
+            public long contentId;
             // 0x1 = valid/present
             // 0x2 = unknown but set for some alliance members?
             // 0x4 = unknown but always set for current party and alliance members?
             // 0x8 = unknown but always set for current party?
             public byte flags;
-            public uint objectID;
+            public uint objectId;
             public ushort territoryType;
             public string partyType;
         }
@@ -286,17 +286,17 @@ namespace RainbowMage.OverlayPlugin.EventSources
                     currentAlliance = "Party";
                 }
             }
-            else if ((cachedPartyList.Unk_3D40 & 0x100) == 0x100)
+            else if ((cachedPartyList.currentPartyFlags & 0x100) == 0x100)
             {
                 currentAlliance = remainingAlliances[0];
                 remainingAlliances.RemoveAt(0);
             }
-            else if ((cachedPartyList.Unk_3D40 & 0x1) == 0x1)
+            else if ((cachedPartyList.currentPartyFlags & 0x1) == 0x1)
             {
                 currentAlliance = remainingAlliances[1];
                 remainingAlliances.RemoveAt(1);
             }
-            else if ((cachedPartyList.Unk_3D40 & 0x10000) == 0x10000)
+            else if ((cachedPartyList.currentPartyFlags & 0x10000) == 0x10000)
             {
                 currentAlliance = remainingAlliances[2];
                 remainingAlliances.RemoveAt(2);
@@ -305,7 +305,7 @@ namespace RainbowMage.OverlayPlugin.EventSources
             {
                 currentAlliance = remainingAlliances[2];
                 remainingAlliances.RemoveAt(2);
-                Log(LogLevel.Warning, $"Could not detect player alliance, value {cachedPartyList.Unk_3D40:X8}");
+                Log(LogLevel.Warning, $"Could not detect player alliance, value {cachedPartyList.currentPartyFlags:X8}");
             }
 
             BuildPartyMemberResults(result, cachedPartyList.partyMembers, currentAlliance, true);
@@ -329,7 +329,7 @@ namespace RainbowMage.OverlayPlugin.EventSources
                     cachedPartyList.partyId_2,
                     cachedPartyList.partyLeaderIndex,
 
-                    cachedPartyList.Unk_3D40,
+                    cachedPartyList.currentPartyFlags,
                 },
 #if DEBUG
                 debugPartyStruct = cachedPartyList,
@@ -348,15 +348,15 @@ namespace RainbowMage.OverlayPlugin.EventSources
 
                 result.Add(new PartyMember
                 {
-                    id = $"{member.objectID:X}",
+                    id = $"{member.objectId:X}",
                     name = member.name,
                     worldId = member.homeWorld,
                     job = member.classJob,
                     level = member.level,
                     inParty = inParty,
-                    contentID = member.contentID,
+                    contentId = member.contentId,
                     flags = member.flags,
-                    objectID = member.objectID,
+                    objectId = member.objectId,
                     territoryType = member.territoryType,
                     partyType = currentAlliance,
                 });
@@ -413,7 +413,7 @@ namespace RainbowMage.OverlayPlugin.EventSources
                         x = currentPlayer.PosX,
                         y = currentPlayer.PosY,
                         z = currentPlayer.PosZ,
-                        objectID = currentPlayer.ID,
+                        objectId = currentPlayer.ID,
                         currentHP = (uint) currentPlayer.CurrentHP,
                         maxHP = (uint) currentPlayer.MaxHP,
                         currentMP = (ushort) currentPlayer.CurrentMP,
@@ -492,7 +492,7 @@ namespace RainbowMage.OverlayPlugin.EventSources
                     }
                 }
                 // If the party list is in a different order, dispatch the event
-                if (newMember.objectID != oldMember.objectID)
+                if (newMember.objectId != oldMember.objectId)
                 {
                     return true;
                 }
