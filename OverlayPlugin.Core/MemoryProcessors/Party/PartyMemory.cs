@@ -35,11 +35,11 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Party
         public uint Unk_3D40;
 
         public PartyListEntry[] partyMembers;
-        public PartyListEntry[] allianceAMembers;
-        public PartyListEntry[] allianceBMembers;
-        public PartyListEntry[] allianceCMembers;
-        public PartyListEntry[] allianceDMembers;
-        public PartyListEntry[] allianceEMembers;
+        public PartyListEntry[] alliance1Members;
+        public PartyListEntry[] alliance2Members;
+        public PartyListEntry[] alliance3Members;
+        public PartyListEntry[] alliance4Members;
+        public PartyListEntry[] alliance5Members;
     }
 
     public abstract class PartyMemory

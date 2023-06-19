@@ -234,6 +234,10 @@ namespace RainbowMage.OverlayPlugin.EventSources
             // @deprecated, please use partyType
             public bool inParty;
             public long contentID;
+            // 0x1 = valid/present
+            // 0x2 = unknown but set for some alliance members?
+            // 0x4 = unknown but always set for current party and alliance members?
+            // 0x8 = unknown but always set for current party?
             public byte flags;
             public uint objectID;
             public ushort territoryType;
@@ -258,7 +262,7 @@ namespace RainbowMage.OverlayPlugin.EventSources
 
         private void DispatchPartyChangeEvent()
         {
-            // TODO: We know how to detect alliance A/B. Need to verify alliance C/D/E/F
+            // TODO: We know how to detect alliance A/B/C. Need to verify alliance D/E/F
             List<PartyMember> result = new List<PartyMember>(24);
 
             List<string> remainingAlliances = new List<string>() {
@@ -305,11 +309,11 @@ namespace RainbowMage.OverlayPlugin.EventSources
             }
 
             BuildPartyMemberResults(result, cachedPartyList.partyMembers, currentAlliance, true);
-            BuildPartyMemberResults(result, cachedPartyList.allianceAMembers, remainingAlliances[0], true);
-            BuildPartyMemberResults(result, cachedPartyList.allianceBMembers, remainingAlliances[1], true);
-            BuildPartyMemberResults(result, cachedPartyList.allianceCMembers, remainingAlliances[2], true);
-            BuildPartyMemberResults(result, cachedPartyList.allianceDMembers, remainingAlliances[3], true);
-            BuildPartyMemberResults(result, cachedPartyList.allianceEMembers, remainingAlliances[4], true);
+            BuildPartyMemberResults(result, cachedPartyList.alliance1Members, remainingAlliances[0], true);
+            BuildPartyMemberResults(result, cachedPartyList.alliance2Members, remainingAlliances[1], true);
+            BuildPartyMemberResults(result, cachedPartyList.alliance3Members, remainingAlliances[2], true);
+            BuildPartyMemberResults(result, cachedPartyList.alliance4Members, remainingAlliances[3], true);
+            BuildPartyMemberResults(result, cachedPartyList.alliance5Members, remainingAlliances[4], true);
 
             Log(LogLevel.Debug, "party list: {0}", JObject.FromObject(new { party = result }).ToString());
 
@@ -418,10 +422,6 @@ namespace RainbowMage.OverlayPlugin.EventSources
                         name = currentPlayer.Name,
                         classJob = currentPlayer.Job,
                         level = currentPlayer.Level,
-                        // 0x1 = valid/present
-                        // 0x2 = unknown but set for some alliance members?
-                        // 0x4 = unknown but always set for current party and alliance members?
-                        // 0x8 = unknown but always set for current party?
                         flags = 0x13,
                     },
                 };
@@ -434,30 +434,30 @@ namespace RainbowMage.OverlayPlugin.EventSources
             {
                 dispatchEvent = true;
             }
-            // Check each of party and alliances A/B/C/D/E
+            // Check each of party and alliances 1-5
             if (!dispatchEvent)
             {
                 dispatchEvent = HasPartyCompChanged(cachedPartyList.partyMembers, newParty.partyMembers);
             }
             if (!dispatchEvent)
             {
-                dispatchEvent = HasPartyCompChanged(cachedPartyList.allianceAMembers, newParty.allianceAMembers);
+                dispatchEvent = HasPartyCompChanged(cachedPartyList.alliance1Members, newParty.alliance1Members);
             }
             if (!dispatchEvent)
             {
-                dispatchEvent = HasPartyCompChanged(cachedPartyList.allianceBMembers, newParty.allianceBMembers);
+                dispatchEvent = HasPartyCompChanged(cachedPartyList.alliance2Members, newParty.alliance2Members);
             }
             if (!dispatchEvent)
             {
-                dispatchEvent = HasPartyCompChanged(cachedPartyList.allianceCMembers, newParty.allianceCMembers);
+                dispatchEvent = HasPartyCompChanged(cachedPartyList.alliance3Members, newParty.alliance3Members);
             }
             if (!dispatchEvent)
             {
-                dispatchEvent = HasPartyCompChanged(cachedPartyList.allianceDMembers, newParty.allianceDMembers);
+                dispatchEvent = HasPartyCompChanged(cachedPartyList.alliance4Members, newParty.alliance4Members);
             }
             if (!dispatchEvent)
             {
-                dispatchEvent = HasPartyCompChanged(cachedPartyList.allianceEMembers, newParty.allianceEMembers);
+                dispatchEvent = HasPartyCompChanged(cachedPartyList.alliance5Members, newParty.alliance5Members);
             }
             cachedPartyList = newParty;
             if (dispatchEvent)

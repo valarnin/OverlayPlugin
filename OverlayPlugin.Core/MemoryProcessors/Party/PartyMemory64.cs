@@ -45,12 +45,12 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Party
 
             // `AllianceMembers` is a fixed-position array, with removed elements being mostly zero'd out
             // Easiest way to check if an entry is still active is to check for `Flags != 0`
-            var allianceAMembers = extractAllianceMembers(groupManager1.AllianceMembers, 20, 0, 8);
-            var allianceBMembers = extractAllianceMembers(groupManager1.AllianceMembers, 20, 8, 8);
-            // TOOD: Actually verify C/D/E alliance info?
-            var allianceCMembers = extractAllianceMembers(groupManager2.PartyMembers, 8, 0, 8);
-            var allianceDMembers = extractAllianceMembers(groupManager2.AllianceMembers, 20, 0, 8);
-            var allianceEMembers = extractAllianceMembers(groupManager2.AllianceMembers, 20, 8, 8);
+            var alliance1Members = extractAllianceMembers(groupManager1.AllianceMembers, 20, 0, 8);
+            var alliance2Members = extractAllianceMembers(groupManager1.AllianceMembers, 20, 8, 8);
+            // TOOD: Actually verify D/E/F alliance info?
+            var alliance3Members = extractAllianceMembers(groupManager2.PartyMembers, 8, 0, 8);
+            var alliance4Members = extractAllianceMembers(groupManager2.AllianceMembers, 20, 0, 8);
+            var alliance5Members = extractAllianceMembers(groupManager2.AllianceMembers, 20, 8, 8);
 
             return new PartyListsStruct()
             {
@@ -63,11 +63,11 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Party
                 Unk_3D40 = groupManager1.Unk_3D40,
 
                 partyMembers = partyMembers,
-                allianceAMembers = allianceAMembers,
-                allianceBMembers = allianceBMembers,
-                allianceCMembers = allianceCMembers,
-                allianceDMembers = allianceDMembers,
-                allianceEMembers = allianceEMembers,
+                alliance1Members = alliance1Members,
+                alliance2Members = alliance2Members,
+                alliance3Members = alliance3Members,
+                alliance4Members = alliance4Members,
+                alliance5Members = alliance5Members,
             };
         }
 
