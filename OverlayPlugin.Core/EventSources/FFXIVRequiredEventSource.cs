@@ -383,6 +383,11 @@ namespace RainbowMage.OverlayPlugin.EventSources
         public override void LoadConfig(IPluginConfig config)
         {
             this.Config = container.Resolve<BuiltinEventConfig>();
+
+            this.Config.UpdateIntervalChanged += (o, e) =>
+            {
+                this.Start();
+            };
         }
 
         public override void SaveConfig(IPluginConfig config)
@@ -392,7 +397,9 @@ namespace RainbowMage.OverlayPlugin.EventSources
 
         public override void Start()
         {
-            this.timer.Change(0, 10);
+            // Use the config update interval, but clamp an upper limit at 5000ms
+            var updateInterval = Math.Min(5000, this.Config.UpdateInterval * 1000);
+            this.timer.Change(0, updateInterval);
         }
 
         protected override void Update()
