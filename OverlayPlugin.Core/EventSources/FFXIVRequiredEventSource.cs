@@ -222,6 +222,18 @@ namespace RainbowMage.OverlayPlugin.EventSources
             return filteredCombatants;
         }
 
+        public enum PartyType
+        {
+            Solo,
+            Party,
+            AllianceA,
+            AllianceB,
+            AllianceC,
+            AllianceD,
+            AllianceE,
+            AllianceF,
+        }
+
         struct PartyMember
         {
             // Player id in hex (for ease in matching logs).
@@ -265,25 +277,25 @@ namespace RainbowMage.OverlayPlugin.EventSources
             // TODO: We know how to detect alliance A/B/C. Need to verify alliance D/E/F
             List<PartyMember> result = new List<PartyMember>(24);
 
-            List<string> remainingAlliances = new List<string>() {
-                "Alliance A",
-                "Alliance B",
-                "Alliance C",
-                "Alliance D",
-                "Alliance E",
-                "Alliance F",
+            List<PartyType> remainingAlliances = new List<PartyType>() {
+                PartyType.AllianceA,
+                PartyType.AllianceB,
+                PartyType.AllianceC,
+                PartyType.AllianceD,
+                PartyType.AllianceE,
+                PartyType.AllianceF,
             };
 
-            string currentAlliance;
+            PartyType currentAlliance;
             if ((cachedPartyList.allianceFlags & 0x1) == 0)
             {
                 if (cachedPartyList.memberCount <= 1)
                 {
-                    currentAlliance = "Solo";
+                    currentAlliance = PartyType.Solo;
                 }
                 else
                 {
-                    currentAlliance = "Party";
+                    currentAlliance = PartyType.Party;
                 }
             }
             else if ((cachedPartyList.currentPartyFlags & 0x100) == 0x100)
@@ -337,7 +349,7 @@ namespace RainbowMage.OverlayPlugin.EventSources
             }));
         }
 
-        private void BuildPartyMemberResults(List<PartyMember> result, PartyListEntry[] members, string currentAlliance, bool inParty)
+        private void BuildPartyMemberResults(List<PartyMember> result, PartyListEntry[] members, PartyType partyType, bool inParty)
         {
             foreach (var member in members)
             {
@@ -358,7 +370,7 @@ namespace RainbowMage.OverlayPlugin.EventSources
                     flags = member.flags,
                     objectId = member.objectId,
                     territoryType = member.territoryType,
-                    partyType = currentAlliance,
+                    partyType = partyType.ToString(),
                 });
             }
         }
