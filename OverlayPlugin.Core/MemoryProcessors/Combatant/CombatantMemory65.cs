@@ -194,6 +194,9 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
             [FieldOffset(0x1DB)]
             public byte Level;
 
+            [FieldOffset(0xC30)]
+            public byte WeaponId;
+
             [FieldOffset(0xD00)]
             public uint PCTargetID;
 
@@ -216,10 +219,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
 
             [FieldOffset(0x1BB2)]
             public ushort WorldID;
-
-            // TODO: Verify this for 6.5
-            [FieldOffset(0x1BC0)]
-            public byte WeaponId;
 
             [FieldOffset(0x1C18)]
             public fixed byte Effects[EffectBytes];
