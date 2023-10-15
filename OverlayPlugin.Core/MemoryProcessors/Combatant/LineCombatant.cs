@@ -58,17 +58,20 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
 
                 CheckFieldDelay = new ReadOnlyDictionary<FieldInfo, uint>(new Dictionary<FieldInfo, uint>(){
                     // Default delay threshold
-                    { typeof(Combatant).GetField(nameof(Combatant.OwnerID)),          InCombatDelayDefault },
-                    { typeof(Combatant).GetField(nameof(Combatant.Type)),             InCombatDelayDefault },
-                    { typeof(Combatant).GetField(nameof(Combatant.MonsterType)),      InCombatDelayDefault },
-                    { typeof(Combatant).GetField(nameof(Combatant.Status)),           InCombatDelayDefault },
-                    { typeof(Combatant).GetField(nameof(Combatant.AggressionStatus)), InCombatDelayDefault },
-                    { typeof(Combatant).GetField(nameof(Combatant.IsTargetable)),     InCombatDelayDefault },
-                    { typeof(Combatant).GetField(nameof(Combatant.Name)),             InCombatDelayDefault },
-                    { typeof(Combatant).GetField(nameof(Combatant.Radius)),           InCombatDelayDefault },
-                    { typeof(Combatant).GetField(nameof(Combatant.BNpcID)),           InCombatDelayDefault },
-                    { typeof(Combatant).GetField(nameof(Combatant.CurrentMP)),        InCombatDelayDefault },
-                    { typeof(Combatant).GetField(nameof(Combatant.IsCasting1)),       InCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.OwnerID)),           InCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.Type)),              InCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.MonsterType)),       InCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.Status)),            InCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.AggressionStatus)),  InCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.IsTargetable)),      InCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.Name)),              InCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.Radius)),            InCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.BNpcID)),            InCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.CurrentMP)),         InCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.IsCasting1)),        InCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.CastGroundTargetX)), InCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.CastGroundTargetY)), InCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.CastGroundTargetZ)), InCombatDelayDefault },
 
                     // No delay threshold
                     { typeof(Combatant).GetField(nameof(Combatant.BNpcNameID)),       0 },
@@ -90,17 +93,20 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
 
                 CheckFieldDelay = new ReadOnlyDictionary<FieldInfo, uint>(new Dictionary<FieldInfo, uint>(){
                     // Default delay threshold
-                    { typeof(Combatant).GetField(nameof(Combatant.OwnerID)),          OutOfCombatDelayDefault },
-                    { typeof(Combatant).GetField(nameof(Combatant.Type)),             OutOfCombatDelayDefault },
-                    { typeof(Combatant).GetField(nameof(Combatant.MonsterType)),      OutOfCombatDelayDefault },
-                    { typeof(Combatant).GetField(nameof(Combatant.Status)),           OutOfCombatDelayDefault },
-                    { typeof(Combatant).GetField(nameof(Combatant.AggressionStatus)), OutOfCombatDelayDefault },
-                    { typeof(Combatant).GetField(nameof(Combatant.IsTargetable)),     OutOfCombatDelayDefault },
-                    { typeof(Combatant).GetField(nameof(Combatant.Name)),             OutOfCombatDelayDefault },
-                    { typeof(Combatant).GetField(nameof(Combatant.Radius)),           OutOfCombatDelayDefault },
-                    { typeof(Combatant).GetField(nameof(Combatant.BNpcID)),           OutOfCombatDelayDefault },
-                    { typeof(Combatant).GetField(nameof(Combatant.CurrentMP)),        OutOfCombatDelayDefault },
-                    { typeof(Combatant).GetField(nameof(Combatant.IsCasting1)),       OutOfCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.OwnerID)),           OutOfCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.Type)),              OutOfCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.MonsterType)),       OutOfCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.Status)),            OutOfCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.AggressionStatus)),  OutOfCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.IsTargetable)),      OutOfCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.Name)),              OutOfCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.Radius)),            OutOfCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.BNpcID)),            OutOfCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.CurrentMP)),         OutOfCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.IsCasting1)),        OutOfCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.CastGroundTargetX)), OutOfCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.CastGroundTargetY)), OutOfCombatDelayDefault },
+                    { typeof(Combatant).GetField(nameof(Combatant.CastGroundTargetZ)), OutOfCombatDelayDefault },
 
                     // No delay threshold
                     { typeof(Combatant).GetField(nameof(Combatant.BNpcNameID)),       1000 },
