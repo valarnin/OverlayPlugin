@@ -154,7 +154,8 @@ namespace RainbowMage.OverlayPlugin
 
             // Invoke in UI thread if needed to avoid WinForms issues.
             // See https://github.com/OverlayPlugin/OverlayPlugin/issues/254
-            if (ActGlobals.oFormActMain.InvokeRequired) {
+            if (ActGlobals.oFormActMain.InvokeRequired)
+            {
                 ActGlobals.oFormActMain.Invoke(appendText);
             }
             else
