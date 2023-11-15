@@ -7,109 +7,111 @@ using RainbowMage.OverlayPlugin.MemoryProcessors.FFXIVClientStructs;
 
 namespace RainbowMage.OverlayPlugin.MemoryProcessors.Party
 {
-    interface IPartyMemory64 : IPartyMemory { }
+    interface IPartyMemory65 : IPartyMemory { }
 
-    public class PartyMemory64 : PartyMemory, IPartyMemory64
+    public class PartyMemory65 : PartyMemory, IPartyMemory65
     {
         // Due to lack of multi-version support in FFXIVClientStructs, we need to duplicate these structures here per-version
         // We use FFXIVClientStructs versions of the structs because they have more required details than FFXIV_ACT_Plugin's struct definitions
         #region FFXIVClientStructs structs
-        [StructLayout(LayoutKind.Explicit, Size = 0x188)]
+        [StructLayout(LayoutKind.Explicit, Size = 0x2F0)]
         public unsafe partial struct StatusManager
         {
             [FieldOffset(0x0)]
             public void* Owner;
             [FieldOffset(0x8)]
-            public fixed byte Status[0xC * 30]; // Client::Game::Status array
-            [FieldOffset(0x170)]
-            public uint Unk_170;
-            [FieldOffset(0x174)]
-            public ushort Unk_174;
-            [FieldOffset(0x178)]
+            public fixed byte Status[0xC * 60]; // Client::Game::Status array
+            [FieldOffset(0x2D8)]
+            public uint Flags1;
+            [FieldOffset(0x2DC)]
+            public ushort Flags2;
+            [FieldOffset(0x2E0)]
             public long Unk_178;
-            [FieldOffset(0x180)]
-            public byte Unk_180;
+            [FieldOffset(0x2E8)]
+            public byte NumValidStatuses;
         }
-        [StructLayout(LayoutKind.Explicit, Size = 0x230)]
+        [StructLayout(LayoutKind.Explicit, Size = 0x390)]
         public unsafe struct PartyMember
         {
             [FieldOffset(0x0)]
             public StatusManager StatusManager;
-            [FieldOffset(0x190)]
+            [FieldOffset(0x2F0)]
             public float X;
-            [FieldOffset(0x194)]
+            [FieldOffset(0x2F4)]
             public float Y;
-            [FieldOffset(0x198)]
+            [FieldOffset(0x2F8)]
             public float Z;
-            [FieldOffset(0x1A0)]
+            [FieldOffset(0x300)]
             public long ContentID;
-            [FieldOffset(0x1A8)]
+            [FieldOffset(0x308)]
             public uint ObjectID;
-            [FieldOffset(0x1AC)]
+            [FieldOffset(0x30C)]
             public uint Unk_ObjectID_1;
-            [FieldOffset(0x1B0)]
+            [FieldOffset(0x310)]
             public uint Unk_ObjectID_2;
-            [FieldOffset(0x1B4)]
+            [FieldOffset(0x314)]
             public uint CurrentHP;
-            [FieldOffset(0x1B8)]
+            [FieldOffset(0x318)]
             public uint MaxHP;
-            [FieldOffset(0x1BC)]
+            [FieldOffset(0x31C)]
             public ushort CurrentMP;
-            [FieldOffset(0x1BE)]
+            [FieldOffset(0x31E)]
             public ushort MaxMP;
-            [FieldOffset(0x1C0)]
+            [FieldOffset(0x320)]
             public ushort TerritoryType;
-            [FieldOffset(0x1C2)]
+            [FieldOffset(0x322)]
             public ushort HomeWorld;
-            [FieldOffset(0x1C4)]
+            [FieldOffset(0x324)]
             public fixed byte Name[0x40];
-            [FieldOffset(0x204)]
+            [FieldOffset(0x364)]
             public byte Sex;
-            [FieldOffset(0x205)]
+            [FieldOffset(0x365)]
             public byte ClassJob;
-            [FieldOffset(0x206)]
+            [FieldOffset(0x366)]
             public byte Level;
-            [FieldOffset(0x208)]
+            [FieldOffset(0x367)]
+            public byte DamageShield;
+            [FieldOffset(0x368)]
             public byte Unk_Struct_208__0;
-            [FieldOffset(0x20C)]
+            [FieldOffset(0x36C)]
             public uint Unk_Struct_208__4;
-            [FieldOffset(0x210)]
+            [FieldOffset(0x370)]
             public ushort Unk_Struct_208__8;
-            [FieldOffset(0x214)]
+            [FieldOffset(0x374)]
             public uint Unk_Struct_208__C;
-            [FieldOffset(0x218)]
+            [FieldOffset(0x378)]
             public ushort Unk_Struct_208__10;
-            [FieldOffset(0x21A)]
+            [FieldOffset(0x37A)]
             public ushort Unk_Struct_208__14;
-            [FieldOffset(0x220)]
+            [FieldOffset(0x380)]
             public byte Flags; // 0x01 == set for valid alliance members
         }
-        [StructLayout(LayoutKind.Explicit, Size = 0x3D70)]
+        [StructLayout(LayoutKind.Explicit, Size = 0x63F0)]
         public unsafe partial struct GroupManager
         {
             [FieldOffset(0x0)]
-            public fixed byte PartyMembers[0x230 * 8]; // PartyMember type
-            [FieldOffset(0x1180)]
-            public fixed byte AllianceMembers[0x230 * 20]; // PartyMember type
-            [FieldOffset(0x3D40)]
+            public fixed byte PartyMembers[0x390 * 8]; // PartyMember type
+            [FieldOffset(0x1C80)]
+            public fixed byte AllianceMembers[0x390 * 20]; // PartyMember type
+            [FieldOffset(0x63C0)]
             public uint Unk_3D40;
-            [FieldOffset(0x3D44)]
+            [FieldOffset(0x63C4)]
             public ushort Unk_3D44;
-            [FieldOffset(0x3D48)]
+            [FieldOffset(0x63C8)]
             public long PartyId; // both seem to be unique per party and replicated to every member
-            [FieldOffset(0x3D50)]
+            [FieldOffset(0x63D0)]
             public long PartyId_2;
-            [FieldOffset(0x3D58)]
+            [FieldOffset(0x63D8)]
             public uint PartyLeaderIndex; // index of party leader in array
-            [FieldOffset(0x3D5C)]
+            [FieldOffset(0x63DC)]
             public byte MemberCount;
-            [FieldOffset(0x3D5D)]
+            [FieldOffset(0x63DD)]
             public byte Unk_3D5D;
-            [FieldOffset(0x3D5F)]
+            [FieldOffset(0x63DF)]
             public byte Unk_3D5F; // some sort of count
-            [FieldOffset(0x3D60)]
+            [FieldOffset(0x63E0)]
             public byte Unk_3D60;
-            [FieldOffset(0x3D61)]
+            [FieldOffset(0x63E1)]
             public byte AllianceFlags; // 0x01 == is alliance; 0x02 == alliance with 5 4-man groups rather than 2 8-man
         }
         #endregion
@@ -120,11 +122,11 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Party
             public GroupManager groupManager2;
         }
 
-        public PartyMemory64(TinyIoCContainer container) : base(container) { }
+        public PartyMemory65(TinyIoCContainer container) : base(container) { }
 
         public override Version GetVersion()
         {
-            return new Version(6, 4);
+            return new Version(6, 5);
         }
 
 

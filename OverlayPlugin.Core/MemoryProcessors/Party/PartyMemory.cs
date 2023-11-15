@@ -47,40 +47,34 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Party
         protected FFXIVMemory memory;
         protected ILogger logger;
 
-        protected IntPtr party1InstanceAddress = IntPtr.Zero;
-        protected IntPtr party2InstanceAddress = IntPtr.Zero;
+        protected IntPtr partyInstanceAddress = IntPtr.Zero;
 
-        private long partySingletonAddressInstance1;
-        private long partySingletonAddressInstance2;
+        private long partySingletonAddressInstance;
+        protected Func<IntPtr> GetGroupManagerAddress;
 
-        public PartyMemory(TinyIoCContainer container, long partySingletonAddressInstance1, long partySingletonAddressInstance2)
+
+        public PartyMemory(TinyIoCContainer container)
         {
-            this.partySingletonAddressInstance1 = partySingletonAddressInstance1;
-            this.partySingletonAddressInstance2 = partySingletonAddressInstance2;
             logger = container.Resolve<ILogger>();
             memory = container.Resolve<FFXIVMemory>();
-        }
 
-        private void ResetPointers()
-        {
-            party1InstanceAddress = IntPtr.Zero;
-        }
+            var repository = container.Resolve<FFXIVRepository>();
+            var readParty = repository.GetFFXIVACTPluginIOCService("FFXIV_ACT_Plugin.Memory", "FFXIV_ACT_Plugin.Memory.ISignatureManager");
+            var sigType = 0x50;
 
-        private bool HasValidPointers()
-        {
-            if (party1InstanceAddress == IntPtr.Zero)
-                return false;
-            if (party2InstanceAddress == IntPtr.Zero)
-                return false;
-            return true;
+            var readPartyReadFunc = readParty.GetType().GetMethod("Read");
+
+            GetGroupManagerAddress = () =>
+            {
+                return (IntPtr)readPartyReadFunc.Invoke(readParty, new object[] { sigType });
+            };
         }
 
         public bool IsValid()
         {
+            // The GroupManager addresses are static and never change
+            // So we don't need to reset pointers or check for valid pointers
             if (!memory.IsValid())
-                return false;
-
-            if (!HasValidPointers())
                 return false;
 
             return true;
@@ -88,39 +82,28 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Party
 
         public void ScanPointers()
         {
-            ResetPointers();
             if (!memory.IsValid())
                 return;
 
             List<string> fail = new List<string>();
 
             // These addresses aren't pointers, they're static memory structures. Therefore we don't need to resolve nested pointers.
-            long instanceAddress = memory.GetBaseAddress().ToInt64() + partySingletonAddressInstance1;
+            long instanceAddress = (long)GetGroupManagerAddress();
 
             if (instanceAddress != 0)
             {
-                party1InstanceAddress = new IntPtr(instanceAddress);
+                if (instanceAddress == partyInstanceAddress.ToInt64())
+                    return;
+
+                partyInstanceAddress = new IntPtr(instanceAddress);
             }
             else
             {
-                party1InstanceAddress = IntPtr.Zero;
-                fail.Add(nameof(party1InstanceAddress));
+                partyInstanceAddress = IntPtr.Zero;
+                fail.Add(nameof(partyInstanceAddress));
             }
 
-            instanceAddress = memory.GetBaseAddress().ToInt64() + partySingletonAddressInstance2;
-
-            if (instanceAddress != 0)
-            {
-                party2InstanceAddress = new IntPtr(instanceAddress);
-            }
-            else
-            {
-                party2InstanceAddress = IntPtr.Zero;
-                fail.Add(nameof(party2InstanceAddress));
-            }
-
-            logger.Log(LogLevel.Debug, "party1InstanceAddress: 0x{0:X}", party1InstanceAddress.ToInt64());
-            logger.Log(LogLevel.Debug, "party2InstanceAddress: 0x{0:X}", party2InstanceAddress.ToInt64());
+            logger.Log(LogLevel.Debug, "partyInstanceAddress: 0x{0:X}", partyInstanceAddress.ToInt64());
 
             if (fail.Count == 0)
             {
@@ -139,7 +122,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Party
         {
             if (!IsValid())
                 return IntPtr.Zero;
-            return party1InstanceAddress;
+            return partyInstanceAddress;
         }
     }
 }
