@@ -58,7 +58,9 @@ try {
         echo "==> Preparing FFXIVClientStructs..."
         
         echo "==> Building StripFFXIVClientStructs..."
-        msbuild -p:Configuration=Release -p:Platform=x64 "OverlayPlugin.sln" -t:StripFFXIVClientStructs -restore:True -v:q
+        # There's probably a better way to target just StripFFXIVClientStructs for build but `dotnet` was insisting on
+        # building all associated projects even when passing the `-t:StripFFXIVClientStructs` flag through to msbuild
+        dotnet publish -v quiet -c release -a x64 ".\tools\StripFFXIVClientStructs\StripFFXIVClientStructs\StripFFXIVClientStructs.csproj"
 
         cd OverlayPlugin.Core\Thirdparty\FFXIVClientStructs\Base
 
@@ -68,7 +70,7 @@ try {
 
             echo "==> Stripping FFXIVClientStructs for namespace $ns..."
 
-            ..\..\..\..\tools\StripFFXIVClientStructs\StripFFXIVClientStructs\bin\Release\net6.0\StripFFXIVClientStructs.exe $ns .\$ns ..\Transformed\$ns
+            ..\..\..\..\tools\StripFFXIVClientStructs\StripFFXIVClientStructs\bin\Release\StripFFXIVClientStructs.exe $ns .\$ns ..\Transformed\$ns
         }
 
         cd ..\..\..\..
@@ -76,14 +78,15 @@ try {
 
     if ($ci) {
         echo "==> Continuous integration flag set. Building Debug..."
-        msbuild -p:Configuration=Debug -p:Platform=x64 "OverlayPlugin.sln" -t:Restore
-        msbuild -p:Configuration=Debug -p:Platform=x64 "OverlayPlugin.sln"    
+        dotnet publish -v quiet -c debug
+        
+        if (-not $?) { exit 1 }
     }
 
     echo "==> Building..."
 
-    msbuild -p:Configuration=Release -p:Platform=x64 "OverlayPlugin.sln" -t:Restore -v:q
-    msbuild -p:Configuration=Release -p:Platform=x64 "OverlayPlugin.sln" -v:q
+    dotnet publish -v quiet -c release
+    
     if (-not $?) { exit 1 }
 
     echo "==> Building archive..."
