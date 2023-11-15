@@ -103,16 +103,9 @@ try {
     cp -Recurse @("libs\de-DE", "libs\fr-FR", "libs\ja-JP", "libs\ko-KR", "libs\zh-CN") OverlayPlugin\libs
 
 
-    $text = [System.IO.File]::ReadAllText("$PWD\..\..\OverlayPlugin\Properties\AssemblyInfo.cs");
-    $regex = [regex]::New('\[assembly: AssemblyVersion\("([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+"\)');
-    $m = $regex.Match($text);
-
-    if (-not $m) {
-        echo "Error: Version number not found in the AssemblyInfo.cs!"
-        exit 1
-    }
-
-    $version = $m.Groups[1]
+    [xml]$csprojcontents = Get-Content -Path "$PWD\..\..\Directory.Build.props";
+    $version = $csprojcontents.Project.PropertyGroup.AssemblyVersion;
+    $version = ($version | Out-String).Trim()
     $archive = "..\OverlayPlugin-$version.7z"
 
     if (Test-Path $archive) { rm $archive }

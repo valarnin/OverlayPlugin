@@ -6,10 +6,10 @@
     <AssemblyTitle>OverlayPlugin</AssemblyTitle>
     <Product>OverlayPlugin</Product>
     <Description>Overlay plugin for Advanced Combat Tracker</Description>
-    <PostBuildEvent>xcopy /Y /R "$(SolutionDir)README"* "$(TargetDir)"
-xcopy /Y /R "$(SolutionDir)LICENSE.txt" "$(TargetDir)"
-</PostBuildEvent>
     <OutputPath>..\out\$(Configuration)\</OutputPath>
+    <PostBuildEvent>xcopy /Y /R "$(SolutionDir)README"* "$(MSBuildProjectDirectory)\$(OutputPath)"
+xcopy /Y /R "$(SolutionDir)LICENSE.txt" "$(MSBuildProjectDirectory)\$(OutputPath)"
+</PostBuildEvent>
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>

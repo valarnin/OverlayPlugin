@@ -233,7 +233,7 @@ namespace RainbowMage.OverlayPlugin.EventSources
                 return new JObject();
             }
 
-#if DEBUG
+#if TRACE
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 #endif

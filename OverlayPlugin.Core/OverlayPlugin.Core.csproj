@@ -8,7 +8,7 @@
     <Product>OverlayPlugin.Core</Product>
     <OutputPath>..\out\$(Configuration)\libs\</OutputPath>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <PostBuildEvent>xcopy /d /e /i /q /r /h /y $(ProjectDir)\resources $(TargetDir)\..\resources</PostBuildEvent>
+    <PostBuildEvent>xcopy /d /e /i /q /r /h /y $(MSBuildProjectDirectory)\resources $(MSBuildProjectDirectory)\$(OutputPath)\..\resources</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
