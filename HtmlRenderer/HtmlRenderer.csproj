@@ -1,21 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <ProjectGuid>{E2BC6483-B966-4A4A-B4CC-D50A4BD73AF3}</ProjectGuid>
     <CefSharpAnyCpuSupport>true</CefSharpAnyCpuSupport>
     <RootNamespace>RainbowMage.HtmlRenderer</RootNamespace>
     <TargetFramework>net48</TargetFramework>
     <AssemblyTitle>HtmlRenderer</AssemblyTitle>
     <Product>HtmlRenderer</Product>
     <Description>HTML based offscreen rendering library for the OverlayPlugin.</Description>
-    <Copyright>Copyright © RainbowMage 2015, Kuriyama hibiya 2016, ngld 2019</Copyright>
-    <AssemblyVersion>0.19.23.0</AssemblyVersion>
-    <FileVersion>0.19.23.0</FileVersion>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <OutputPath>..\out\$(Configuration)\libs\</OutputPath>
-    <PostBuildEvent />
-    <DebugType>pdbonly</DebugType>
-  </PropertyGroup>
-  <PropertyGroup>
-    <PostBuildEvent />
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.Windows.Forms" />
@@ -50,8 +42,8 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="cef.redist.x64" Version="95.7.14" />
-    <PackageReference Include="cef.redist.x86" Version="95.7.14" />
+    <PackageReference Include="cef.redist.x64" Version="95.7.14" Condition="'$(Platform)' == 'x64" />
+    <PackageReference Include="cef.redist.x86" Version="95.7.14" Condition="'$(Platform)' == 'x86" />
     <PackageReference Include="CefSharp.Common" Version="95.7.141" />
     <PackageReference Include="CefSharp.OffScreen" Version="95.7.141" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />

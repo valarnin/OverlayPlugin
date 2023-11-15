@@ -1,16 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <ProjectGuid>{423FCBFC-DD3B-415F-BE29-7A4A46614B79}</ProjectGuid>
     <RootNamespace>RainbowMage.OverlayPlugin</RootNamespace>
     <TargetFramework>net48</TargetFramework>
     <AssemblyTitle>OverlayPlugin.Common</AssemblyTitle>
     <Product>OverlayAddon</Product>
     <Description>Common types of the OverlayPlugin</Description>
-    <Copyright>Copyright © RainbowMage 2015, Kuriyama hibiya 2016, ngld 2019</Copyright>
-    <AssemblyVersion>0.19.23.0</AssemblyVersion>
-    <FileVersion>0.19.23.0</FileVersion>
     <OutputPath>..\out\$(Configuration)\libs\</OutputPath>
-    <DebugType>pdbonly</DebugType>
-    <DefineConstants />
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Advanced Combat Tracker">

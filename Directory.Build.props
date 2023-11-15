@@ -1,0 +1,18 @@
+<Project>
+    <!-- These properties get imported for subprojects to reduce boilerplate -->
+    <PropertyGroup>
+        <Copyright>Copyright © RainbowMage 2015, Kuriyama hibiya 2016, ngld 2019, OverlayPlugin Team 2022</Copyright>
+        <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+        <AssemblyVersion>0.19.23.0</AssemblyVersion>
+        <FileVersion>0.19.23.0</FileVersion>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+        <DebugType>full</DebugType>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+        <DebugType>pdbonly</DebugType>
+    </PropertyGroup>
+    <ItemGroup>
+        <Compile Remove="obj\**\*.AssemblyAttributes.cs" />
+    </ItemGroup>
+</Project>
