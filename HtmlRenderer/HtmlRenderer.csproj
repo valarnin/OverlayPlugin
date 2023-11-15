@@ -42,12 +42,14 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="cef.redist.x64" Version="95.7.14" />
-    <PackageReference Include="CefSharp.Common" Version="95.7.141">
+    <PackageReference Include="CefSharp.Common" Version="95.7.141" Condition="'$(Configuration)' == 'Debug'" />
+    <PackageReference Include="CefSharp.OffScreen" Version="95.7.141" Condition="'$(Configuration)' == 'Debug'" />
+    <PackageReference Include="CefSharp.Common" Version="95.7.141" Condition="'$(Configuration)' == 'Release'">
       <IncludeAssets>compile</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
-    <PackageReference Include="CefSharp.OffScreen" Version="95.7.141">
+    <PackageReference Include="CefSharp.OffScreen" Version="95.7.141" Condition="'$(Configuration)' == 'Release'">
       <IncludeAssets>compile</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
       <ExcludeAssets>runtime</ExcludeAssets>
