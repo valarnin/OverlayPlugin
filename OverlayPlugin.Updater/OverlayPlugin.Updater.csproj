@@ -11,8 +11,6 @@
     <OutputPath>..\out\$(Configuration)\libs\</OutputPath>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PostBuildEvent />
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
   </PropertyGroup>
   <PropertyGroup>
