@@ -42,8 +42,7 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="cef.redist.x64" Version="95.7.14" Condition="'$(Platform)' == 'x64" />
-    <PackageReference Include="cef.redist.x86" Version="95.7.14" Condition="'$(Platform)' == 'x86" />
+    <PackageReference Include="cef.redist.x64" Version="95.7.14" />
     <PackageReference Include="CefSharp.Common" Version="95.7.141" />
     <PackageReference Include="CefSharp.OffScreen" Version="95.7.141" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />

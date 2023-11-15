@@ -13,7 +13,7 @@ xcopy /Y /R "$(SolutionDir)LICENSE.txt" "$(TargetDir)"
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Advanced Combat Tracker, Version=3.4.9.271, Culture=neutral, PublicKeyToken=a946b61e93d97868, processorArchitecture=x86">
+    <Reference Include="Advanced Combat Tracker">
       <HintPath>..\Thirdparty\ACT\Advanced Combat Tracker.exe</HintPath>
       <Private>False</Private>
       <SpecificVersion>False</SpecificVersion>

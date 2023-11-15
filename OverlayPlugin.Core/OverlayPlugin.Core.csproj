@@ -110,7 +110,10 @@
     <Compile Update="Controls\WSConfigPanel.Designer.cs">
       <DependentUpon>WSConfigPanel.cs</DependentUpon>
     </Compile>
-    <Compile Include="Thirdparty\FFXIVClientStructs\Transformed\**\*.cs" />
+    <Content Remove="Thirdparty\FFXIVClientStructs\Base\**" />
+    <Compile Remove="Thirdparty\FFXIVClientStructs\Base\**" />
+    <EmbeddedResource Remove="Thirdparty\FFXIVClientStructs\Base\**" />
+    <None Remove="Thirdparty\FFXIVClientStructs\Base\**" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="resources\enmity\aggrolist.html">
