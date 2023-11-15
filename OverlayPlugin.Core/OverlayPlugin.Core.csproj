@@ -3,7 +3,6 @@
     <CefSharpAnyCpuSupport>true</CefSharpAnyCpuSupport>
     <ProjectGuid>{DD6D2A9A-4AD4-47B8-A1D0-C8608EA37092}</ProjectGuid>
     <RootNamespace>RainbowMage.OverlayPlugin</RootNamespace>
-    <TargetFramework>net48</TargetFramework>
     <AssemblyTitle>OverlayPlugin.Core</AssemblyTitle>
     <Product>OverlayPlugin.Core</Product>
     <OutputPath>..\out\$(Configuration)\libs\</OutputPath>
