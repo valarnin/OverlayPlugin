@@ -176,7 +176,7 @@ if (($toUpdate + $obsolete).Length -eq 0) {
 }
 
 Write-Host "Saving dependency cache..."
-$json = [Newtonsoft.Json.JsonConvert]::SerializeObject($deps, $jsonConvertOptions)
+$json = $JsonConvert::SerializeObject($deps, $jsonConvertOptions)
 Set-Content -Path $cache_path -Value $json
 
 if ($updated_hash -eq $True) {
