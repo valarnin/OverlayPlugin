@@ -5,16 +5,10 @@
     <Product>OverlayPlugin.VSBuildDeps</Product>
   </PropertyGroup>
   <Target Name="FetchDeps" Condition=" '$(FetchDeps)'!='false' " BeforeTargets="PrepareForBuild">
-    <PropertyGroup>
-      <PowerShellExe Condition=" '$(PowerShellExe)'=='' ">%WINDIR%\System32\WindowsPowerShell\v1.0\powershell.exe</PowerShellExe>
-    </PropertyGroup>
-    <Exec Command="$(PowerShellExe) -NonInteractive -executionpolicy Unrestricted -command &quot;&amp; { &amp;&apos;..\fetch_deps.ps1&apos;} &quot;" />
+    <Exec Command="powershell -NonInteractive -executionpolicy Unrestricted -command &quot;&amp; { &amp;&apos;..\fetch_deps.ps1&apos;} &quot;" />
   </Target>
   <Target Name="StripClientStructs" Condition=" '$(StripClientStructs)'!='false' " BeforeTargets="PrepareForBuild">
-    <PropertyGroup>
-      <PowerShellExe Condition=" '$(PowerShellExe)'=='' ">%WINDIR%\System32\WindowsPowerShell\v1.0\powershell.exe</PowerShellExe>
-    </PropertyGroup>
-    <Exec Command="$(PowerShellExe) -NonInteractive -executionpolicy Unrestricted -command &quot;&amp; { &amp;&apos;..\strip-clientstructs.ps1&apos;} &quot;" />
+    <Exec Command="powershell -NonInteractive -executionpolicy Unrestricted -command &quot;&amp; { &amp;&apos;..\strip-clientstructs.ps1&apos;} &quot;" />
   </Target>
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
