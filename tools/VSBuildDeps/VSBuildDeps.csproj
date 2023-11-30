@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <ProjectGuid>{6423EE85-3E94-4290-8699-BF403245501F}</ProjectGuid>
+    <AssemblyTitle>OverlayPlugin.VSBuildDeps</AssemblyTitle>
+    <Product>OverlayPlugin.VSBuildDeps</Product>
+  </PropertyGroup>
+  <Target Name="FetchDeps" Condition=" '$(FetchDeps)'!='false' " BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <PowerShellExe Condition=" '$(PowerShellExe)'=='' ">%WINDIR%\System32\WindowsPowerShell\v1.0\powershell.exe</PowerShellExe>
+    </PropertyGroup>
+    <Exec Command="$(PowerShellExe) -NonInteractive -executionpolicy Unrestricted -command &quot;&amp; { &amp;&apos;..\fetch_deps.ps1&apos;} &quot;" />
+  </Target>
+  <Target Name="StripClientStructs" Condition=" '$(StripClientStructs)'!='false' " BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <PowerShellExe Condition=" '$(PowerShellExe)'=='' ">%WINDIR%\System32\WindowsPowerShell\v1.0\powershell.exe</PowerShellExe>
+    </PropertyGroup>
+    <Exec Command="$(PowerShellExe) -NonInteractive -executionpolicy Unrestricted -command &quot;&amp; { &amp;&apos;..\strip-clientstructs.ps1&apos;} &quot;" />
+  </Target>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+  </ItemGroup>
+</Project>
