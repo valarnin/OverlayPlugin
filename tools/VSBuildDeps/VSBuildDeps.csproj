@@ -10,11 +10,15 @@
     <DebugType>none</DebugType>
   </PropertyGroup>
   <Target Name="FetchDeps" Condition=" '$(FetchDeps)'!='false' " BeforeTargets="PrepareForBuild">
-    <Exec Command="powershell -NonInteractive -executionpolicy Unrestricted -command &quot;&amp; { &amp;&apos;..\fetch_deps.ps1&apos;} &quot;" />
+    <Exec Command="powershell -NonInteractive -executionpolicy Unrestricted -command &quot;&amp; { &amp;'..\fetch_deps.ps1'} &quot;" />
   </Target>
   <Target Name="StripClientStructs" Condition=" '$(StripClientStructs)'!='false' " BeforeTargets="PrepareForBuild">
-    <Exec Command="powershell -NonInteractive -executionpolicy Unrestricted -command &quot;&amp; { &amp;&apos;..\strip-clientstructs.ps1&apos;} &quot;" />
+    <Exec Command="powershell -NonInteractive -executionpolicy Unrestricted -command &quot;&amp; { &amp;'..\strip-clientstructs.ps1'} &quot;" />
   </Target>
+  <ItemGroup>
+    <None Include="..\fetch_deps.ps1" Link="fetch_deps.ps1" />
+    <None Include="..\strip-clientstructs.ps1" Link="strip-clientstructs.ps1" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
   </ItemGroup>
