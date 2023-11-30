@@ -114,7 +114,7 @@ if ($toUpdate.Length -gt 0) {
 
             if (${update-hashes}) {
                 $updated_hash = $True
-                $meta.hash[1] = $hash
+                $meta["hash"][1].Value = $hash
             } elseif ($hash -ne $meta["hash"][1].Value) {
                 Throw "ERROR: $key failed the hash check.`nDownloaded hash: $hash`nExpected hash: $($meta["hash"][0].Value)"
             }
