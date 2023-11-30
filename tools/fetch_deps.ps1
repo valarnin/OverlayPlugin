@@ -13,17 +13,32 @@ if ($help) {
     Exit 0
 }
 
+$base = (Get-Item $PSCommandPath).Directory.Parent.FullName
+
 # We're using Newtonsoft.Json here instead of the native Convert*-Json methods
 # because the option to format is extremely ugly before PS 6
 # This is only for $deps, as that's the object that we serialize out in the end
 # if changes are required
 
+try {
+    # If we're running from `Developer Powershell for VS ####`, then Newtonsoft is already available
+    # If we're running from a normal Powershell environment, it's not. So detect that and load
+    # the assembly from one of the sub-projects if needed
+    $checkForNewtonsoft = [Newtonsoft.Json.JsonConvert]
+} catch {
+    $assemblyLocations = (Get-ChildItem -Path $base -Filter Newtonsoft.Json.dll -Recurse -ErrorAction SilentlyContinue -Force)
+
+    if ($assemblyLocations.Length -lt 1) {
+        throw "Could not load Newtonsoft.Json library"
+    }
+
+    Add-Type -LiteralPath $assemblyLocations[0].FullName
+}
+
 $JsonConvert = [Newtonsoft.Json.JsonConvert]
 $jsonConvertOptions = New-Object Newtonsoft.Json.JsonSerializerSettings
 $jsonConvertOptions.Formatting = 1
 
-
-$base = (Get-Item $PSCommandPath).Directory.Parent.FullName
 $dl_path = Join-Path $base ".deps_dl"
 
 $deps_path = (Join-Path $base "DEPS.json")
