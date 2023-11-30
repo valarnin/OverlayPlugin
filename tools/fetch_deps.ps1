@@ -139,11 +139,12 @@ if ($toUpdate.Length -gt 0) {
             for ($strip = 0; $strip -lt $meta["strip"].Value; ++$strip) {
                 $toplevelFolder = (Get-Item (Join-Path $tmpdir "*"))[0].FullName
                 mkdir $tmpdir2 > $null
-                Move-Item (Get-Item (Join-Path $toplevelFolder "*"))[0] $tmpdir2
+                Move-Item (Join-Path $toplevelFolder "*") $tmpdir2
                 Remove-Item $tmpdir -Recurse
                 Move-Item $tmpdir2 $tmpdir
             }
-            Move-Item $tmpdir $dest
+            mkdir $dest > $null
+            Move-Item (Join-Path $tmpdir "*") $dest
         }
     }
 }
