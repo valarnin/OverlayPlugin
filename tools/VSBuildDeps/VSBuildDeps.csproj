@@ -13,7 +13,7 @@
     <Exec Command="powershell -NonInteractive -executionpolicy Unrestricted -command &quot;&amp; { &amp;'..\fetch_deps.ps1'} &quot;" />
   </Target>
   <Target Name="StripClientStructs" Condition=" '$(StripClientStructs)'!='false' " BeforeTargets="PrepareForBuild">
-    <Exec Command="powershell -NonInteractive -executionpolicy Unrestricted -command &quot;&amp; { &amp;'..\strip-clientstructs.ps1'} &quot;" />
+    <Exec Command="powershell -NonInteractive -executionpolicy Unrestricted -command &quot;&amp; { &amp;'..\strip-clientstructs.ps1' '$(SolutionDir)tools\StripFFXIVClientStructs\StripFFXIVClientStructs\bin\$(Configuration)\StripFFXIVClientStructs.exe'} &quot;" />
   </Target>
   <ItemGroup>
     <None Include="..\fetch_deps.ps1" Link="fetch_deps.ps1" />
@@ -21,5 +21,8 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\StripFFXIVClientStructs\StripFFXIVClientStructs\StripFFXIVClientStructs.csproj" Private="False" />
   </ItemGroup>
 </Project>
