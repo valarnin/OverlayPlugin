@@ -6,6 +6,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
 {
     public interface ContentFinderSettings
     {
+        bool inContentFinderContent { get; }
         byte unrestrictedParty { get; }
         byte minimalItemLevel { get; }
         byte silenceEcho { get; }
@@ -20,8 +21,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
 
     public interface IContentFinderSettingsMemory : IVersionedMemory
     {
-        bool GetInContentFinderContent();
-
         ContentFinderSettings GetContentFinderSettings();
     }
 
@@ -72,13 +71,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
             if (!IsValid())
                 return null;
             return memory.GetVersion();
-        }
-
-        public bool GetInContentFinderContent()
-        {
-            if (!IsValid())
-                return false;
-            return memory.GetInContentFinderContent();
         }
 
         public ContentFinderSettings GetContentFinderSettings()

@@ -9,6 +9,8 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
     {
         private struct ContentFinderSettingsImpl : ContentFinderSettings
         {
+            public bool inContentFinderContent { get; set; }
+
             public byte unrestrictedParty { get; set; }
 
             public byte minimalItemLevel { get; set; }
@@ -134,7 +136,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
 
         public abstract Version GetVersion();
 
-        public bool GetInContentFinderContent()
+        private bool GetInContentFinderContent()
         {
             var bytes = memory.GetByteArray(inContentFinderAddress, 1);
             return bytes[0] != 0;
@@ -142,30 +144,48 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
 
         public ContentFinderSettings GetContentFinderSettings()
         {
-            var bytes = memory.GetByteArray(settingsAddress, 5);
             var settings = new ContentFinderSettingsImpl();
+            settings.inContentFinderContent = GetInContentFinderContent();
+
+            // Don't bother fetching other info if we're not in a valid ContentFinder scope
+            if (!settings.inContentFinderContent)
+            {
+                return settings;
+            }
+
+            var bytes = memory.GetByteArray(settingsAddress, 5);
             settings.unrestrictedParty = bytes[0];
             settings.minimalItemLevel = bytes[1];
             settings.silenceEcho = bytes[3];
             settings.explorerMode = bytes[4];
             settings.levelSync = bytes[2];
             var directorPtr = memory.GetInt64(contentDirectorAddress);
-            // Technically, the InstanceContentDirector is 0x1CB2 in length, but grab the minimal length required here.
-            var directorBytes = memory.GetByteArray(new IntPtr(directorPtr), 0x1CA7);
-            // Offsets and logic in `GetItemLevelSync` are based on
-            // https://github.com/Kouzukii/ffxiv-characterstatus-refined/blob/master/CharacterPanelRefined/IlvlSync.cs
-            var ilvlSyncValue1 = (ushort)(directorBytes[0x524] + (directorBytes[0x525] << 8)); // 1316
-            var ilvlSyncValue2 = (ushort)(directorBytes[0x526] + (directorBytes[0x527] << 8)); // 1318
-            var flags1 = directorBytes[0xCE4]; // 3300
-            var flags2 = directorBytes[0x33C]; // 828
-            var minIlvlFlags1 = directorBytes[0x1CA6]; // 7334
-            settings.ilvlSync = GetItemLevelSync(ilvlSyncValue1, ilvlSyncValue2, flags1, flags2, minIlvlFlags1, settings.levelSync);
+
+            // Wrap the ilvlSync in a try/catch, because I'm not sure if this code will persist very well across major game updates
+            // Should work fine for 6.51 and 6.51-hotfix, but I don't really have a good way to check older versions for this logic
+            try
+            {
+                // Technically, the InstanceContentDirector is 0x1CB2 in length, but grab the minimal length required here.
+                var directorBytes = memory.GetByteArray(new IntPtr(directorPtr), 0x1CA7);
+                // Offsets and logic in `GetItemLevelSync` are based on
+                // https://github.com/Kouzukii/ffxiv-characterstatus-refined/blob/master/CharacterPanelRefined/IlvlSync.cs
+                var ilvlSyncValue1 = (ushort)(directorBytes[0x524] + (directorBytes[0x525] << 8)); // 1316
+                var ilvlSyncValue2 = (ushort)(directorBytes[0x526] + (directorBytes[0x527] << 8)); // 1318
+                var flags1 = directorBytes[0xCE4]; // 3300
+                var flags2 = directorBytes[0x33C]; // 828
+                var minIlvlFlags1 = directorBytes[0x1CA6]; // 7334
+                settings.ilvlSync = GetItemLevelSync(ilvlSyncValue1, ilvlSyncValue2, flags1, flags2, minIlvlFlags1, settings.levelSync, settings.inContentFinderContent);
+            }
+            catch (Exception e)
+            {
+                logger.Log(LogLevel.Error, $"Failed to get memory info for ilvlSync calculations: " + e.ToString());
+            }
             return settings;
         }
 
-        private ushort GetItemLevelSync(ushort ilvlSyncValue1, ushort ilvlSyncValue2, byte flags1, byte flags2, byte minIlvlFlags1, byte levelSync)
+        private ushort GetItemLevelSync(ushort ilvlSyncValue1, ushort ilvlSyncValue2, byte flags1, byte flags2, byte minIlvlFlags1, byte levelSync, bool inContentFinderContent)
         {
-            if (GetInContentFinderContent())
+            if (inContentFinderContent)
             {
                 if (flags1 != 8 && (flags2 & 1) == 0)
                 {

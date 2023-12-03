@@ -53,8 +53,13 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
 
                 if (lineType != LogMessageType.ChangeZone && wroteFirstLine)
                     return;
+
+                var line = args.originalLogLine.Split('|');
+                var zoneID = line[2];
+                var zoneName = line[3];
+
                 wroteFirstLine = true;
-                WriteInContentFinderSettingsLine(args.detectedTime);
+                WriteInContentFinderSettingsLine(args.detectedTime, zoneID, zoneName);
             }
             catch (Exception e)
             {
@@ -62,7 +67,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
             }
         }
 
-        private void WriteInContentFinderSettingsLine(DateTime dateTime)
+        private void WriteInContentFinderSettingsLine(DateTime dateTime, string zoneID, string zoneName)
         {
             var inContentFinderContent = contentFinderSettingsMemory.GetInContentFinderContent();
 
@@ -72,6 +77,8 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
 
             logWriter.Invoke(
                 $"{inContentFinderContent}|" +
+                $"{zoneID}|" +
+                $"{zoneName}|" +
                 $"{settings?.ilvlSync ?? 0}|" +
                 $"{settings?.unrestrictedParty ?? 0}|" +
                 $"{settings?.minimalItemLevel ?? 0}|" +
