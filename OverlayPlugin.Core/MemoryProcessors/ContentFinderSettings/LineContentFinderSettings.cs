@@ -72,6 +72,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
 
             logWriter.Invoke(
                 $"{inContentFinderContent}|" +
+                $"{settings?.ilvlSync ?? 0}|" +
                 $"{settings?.unrestrictedParty ?? 0}|" +
                 $"{settings?.minimalItemLevel ?? 0}|" +
                 $"{settings?.silenceEcho ?? 0}|" +

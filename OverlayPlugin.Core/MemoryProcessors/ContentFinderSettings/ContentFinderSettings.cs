@@ -18,31 +18,39 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
             public byte explorerMode { get; set; }
 
             public byte levelSync { get; set; }
+
+            public ushort ilvlSync { get; set; }
         }
 
         private FFXIVMemory memory;
         private ILogger logger;
+        private ICombatantMemory combatantMemoryManager;
 
         private IntPtr settingsAddress = IntPtr.Zero;
         private IntPtr inContentFinderAddress = IntPtr.Zero;
+        private IntPtr contentDirectorAddress = IntPtr.Zero;
 
         private string settingsSignature;
         private string inContentFinderSignature;
+        private string contentDirectorSignature;
         private int inContentSettingsOffset;
 
-        public ContentFinderSettingsMemory(TinyIoCContainer container, string settingsSignature, string inContentFinderSignature, int inContentSettingsOffset)
+        public ContentFinderSettingsMemory(TinyIoCContainer container, string settingsSignature, string inContentFinderSignature, string contentDirectorSignature, int inContentSettingsOffset)
         {
             this.settingsSignature = settingsSignature;
             this.inContentFinderSignature = inContentFinderSignature;
             this.inContentSettingsOffset = inContentSettingsOffset;
+            this.contentDirectorSignature = contentDirectorSignature;
             logger = container.Resolve<ILogger>();
             memory = container.Resolve<FFXIVMemory>();
+            combatantMemoryManager = container.Resolve<ICombatantMemory>();
         }
 
         private void ResetPointers()
         {
             settingsAddress = IntPtr.Zero;
             inContentFinderAddress = IntPtr.Zero;
+            contentDirectorAddress = IntPtr.Zero;
         }
 
         private bool HasValidPointers()
@@ -50,6 +58,8 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
             if (settingsAddress == IntPtr.Zero)
                 return false;
             if (inContentFinderAddress == IntPtr.Zero)
+                return false;
+            if (contentDirectorAddress == IntPtr.Zero)
                 return false;
             return true;
         }
@@ -99,6 +109,19 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
 
             logger.Log(LogLevel.Debug, "inContentFinderAddress: 0x{0:X}", inContentFinderAddress.ToInt64());
 
+            list = memory.SigScan(contentDirectorSignature, -32, true, 1);
+            if (list != null && list.Count > 0)
+            {
+                contentDirectorAddress = list[0];
+            }
+            else
+            {
+                contentDirectorAddress = IntPtr.Zero;
+                fail.Add(nameof(contentDirectorAddress));
+            }
+
+            logger.Log(LogLevel.Debug, "contentDirectorAddress: 0x{0:X}", contentDirectorAddress.ToInt64());
+
             if (fail.Count == 0)
             {
                 logger.Log(LogLevel.Info, $"Found content finder settings memory via {GetType().Name}.");
@@ -126,7 +149,75 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
             settings.silenceEcho = bytes[3];
             settings.explorerMode = bytes[4];
             settings.levelSync = bytes[2];
+            var directorPtr = memory.GetInt64(contentDirectorAddress);
+            // Technically, the InstanceContentDirector is 0x1CB2 in length, but grab the minimal length required here.
+            var directorBytes = memory.GetByteArray(new IntPtr(directorPtr), 0x1CA7);
+            // Offsets and logic in `GetItemLevelSync` are based on
+            // https://github.com/Kouzukii/ffxiv-characterstatus-refined/blob/master/CharacterPanelRefined/IlvlSync.cs
+            var ilvlSyncValue1 = (ushort)(directorBytes[0x524] + (directorBytes[0x525] << 8)); // 1316
+            var ilvlSyncValue2 = (ushort)(directorBytes[0x526] + (directorBytes[0x527] << 8)); // 1318
+            var flags1 = directorBytes[0xCE4]; // 3300
+            var flags2 = directorBytes[0x33C]; // 828
+            var minIlvlFlags1 = directorBytes[0x1CA6]; // 7334
+            settings.ilvlSync = GetItemLevelSync(ilvlSyncValue1, ilvlSyncValue2, flags1, flags2, minIlvlFlags1, settings.levelSync);
             return settings;
+        }
+
+        private ushort GetItemLevelSync(ushort ilvlSyncValue1, ushort ilvlSyncValue2, byte flags1, byte flags2, byte minIlvlFlags1, byte levelSync)
+        {
+            if (GetInContentFinderContent())
+            {
+                if (flags1 != 8 && (flags2 & 1) == 0)
+                {
+                    // min ilvl
+                    if (minIlvlFlags1 >= 0x80 && ilvlSyncValue1 > 0)
+                    {
+                        return ilvlSyncValue1;
+                    }
+
+                    // duty is sync'd
+                    if (((minIlvlFlags1 & 0x40) == 0 || levelSync == 1) && ilvlSyncValue2 > 0)
+                    {
+                        return ilvlSyncValue2;
+                    }
+                }
+            }
+
+            if (levelSync == 1)
+            {
+                var syncedLevel = combatantMemoryManager.GetSelfCombatant().Level;
+                ushort ilvl;
+                if (syncedLevel == 90)
+                    ilvl = 660;
+                else if (syncedLevel >= 83)
+                    ilvl = (ushort)(530 + (syncedLevel - 83) * 3);
+                else if (syncedLevel >= 81)
+                    ilvl = (ushort)(520 + (syncedLevel - 81) * 5);
+                else if (syncedLevel == 80)
+                    ilvl = 530;
+                else if (syncedLevel >= 73)
+                    ilvl = (ushort)(400 + (syncedLevel - 73) * 3);
+                else if (syncedLevel >= 71)
+                    ilvl = (ushort)(390 + (syncedLevel - 71) * 5);
+                else if (syncedLevel == 70)
+                    ilvl = 400;
+                else if (syncedLevel >= 63)
+                    ilvl = (ushort)(270 + (syncedLevel - 63) * 3);
+                else if (syncedLevel >= 61)
+                    ilvl = (ushort)(260 + (syncedLevel - 61) * 5);
+                else if (syncedLevel == 60)
+                    ilvl = 270;
+                else if (syncedLevel >= 53)
+                    ilvl = (ushort)(130 + (syncedLevel - 53) * 3);
+                else if (syncedLevel >= 51)
+                    ilvl = (ushort)(120 + (syncedLevel - 51) * 5);
+                else if (syncedLevel == 50)
+                    ilvl = 130;
+                else
+                    ilvl = syncedLevel;
+                return ilvl;
+            }
+            return 0;
         }
     }
 }
