@@ -69,14 +69,12 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
 
         private void WriteInContentFinderSettingsLine(DateTime dateTime, string zoneID, string zoneName)
         {
-            var inContentFinderContent = contentFinderSettingsMemory.GetInContentFinderContent();
-
             // If we're not in a content finder content instance, set this to null
             // So that we can default to all 0's later
-            var settings = inContentFinderContent ? contentFinderSettingsMemory.GetContentFinderSettings() : null;
+            var settings = contentFinderSettingsMemory.GetContentFinderSettings();
 
             logWriter.Invoke(
-                $"{inContentFinderContent}|" +
+                $"{settings.inContentFinderContent}|" +
                 $"{zoneID}|" +
                 $"{zoneName}|" +
                 $"{settings?.ilvlSync ?? 0}|" +
