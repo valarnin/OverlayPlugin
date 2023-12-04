@@ -25,7 +25,16 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
                 ID = LogFileLineID,
                 Version = 1,
             });
+            // Get the current zone ID before we subscribe
+            var currentZoneId = ffxiv.GetCurrentTerritoryID();
             ffxiv.RegisterZoneChangeDelegate(OnZoneChange);
+
+            // If we already had a zone ID, manually trigger a line
+            if (currentZoneId.HasValue)
+            {
+                var currentZoneName = Advanced_Combat_Tracker.ActGlobals.oFormActMain.CurrentZone;
+                OnZoneChange(currentZoneId.Value, currentZoneName);
+            }
         }
 
         private void OnZoneChange(uint zoneId, string zoneName)
