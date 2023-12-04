@@ -120,6 +120,13 @@
     },
     {
         "StartID": 272,
+        "Name": "SpawnNpcExtra",
+        "Source": "OverlayPlugin",
+        "Version": 1,
+        "Comment": "Extra info from SpawnNpc packets"
+    },
+    {
+        "StartID": 273,
         "EndID": 512,
         "Source": "OverlayPlugin",
         "Version": 0,
