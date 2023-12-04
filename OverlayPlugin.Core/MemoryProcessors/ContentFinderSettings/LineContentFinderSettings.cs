@@ -49,15 +49,15 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
             var settings = contentFinderSettingsMemory.GetContentFinderSettings();
 
             logWriter.Invoke(
-                $"{settings.inContentFinderContent}|" +
                 $"{zoneID}|" +
                 $"{zoneName}|" +
-                $"{settings?.ilvlSync ?? 0}|" +
-                $"{settings?.unrestrictedParty ?? 0}|" +
-                $"{settings?.minimalItemLevel ?? 0}|" +
-                $"{settings?.silenceEcho ?? 0}|" +
-                $"{settings?.explorerMode ?? 0}|" +
-                $"{settings?.levelSync ?? 0}",
+                $"{settings.inContentFinderContent}|" +
+                $"{settings.ilvlSync}|" +
+                $"{settings.unrestrictedParty}|" +
+                $"{settings.minimalItemLevel}|" +
+                $"{settings.silenceEcho}|" +
+                $"{settings.explorerMode}|" +
+                $"{settings.levelSync}",
                 dateTime);
         }
     }
