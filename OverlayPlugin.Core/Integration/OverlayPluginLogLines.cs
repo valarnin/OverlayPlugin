@@ -34,6 +34,7 @@ namespace RainbowMage.OverlayPlugin
             container.Register(new LineActorMove(container));
             container.Register(new LineActorSetPos(container));
             container.Register(new LineSpawnNpcExtra(container));
+            container.Register(new LineActorControlExtra(container));
         }
     }
 
