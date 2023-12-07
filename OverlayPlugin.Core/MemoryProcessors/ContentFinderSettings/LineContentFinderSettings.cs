@@ -1,4 +1,5 @@
 ﻿using System;
+using Advanced_Combat_Tracker;
 
 namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
 {
@@ -25,15 +26,28 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
                 ID = LogFileLineID,
                 Version = 1,
             });
-            // Get the current zone ID before we subscribe
-            var currentZoneId = ffxiv.GetCurrentTerritoryID();
+
             ffxiv.RegisterZoneChangeDelegate(OnZoneChange);
 
-            // If we already had a zone ID, manually trigger a line
-            if (currentZoneId.HasValue)
+            // Theoretically we should be able to check `ffxiv.GetCurrentTerritoryID()` for a value and log it here.
+            // However, this returns `0`, whether checking before or after registering the zone change delegate
+            // and the zone change delegate doesn't get called if the game's already running when starting ACT
+
+            // Instead, use a janky workaround here. Register a log line listener and then once we write our first line, unregister it.
+
+            ActGlobals.oFormActMain.BeforeLogLineRead += LogLineHandler;
+        }
+        private void LogLineHandler(bool isImport, LogLineEventArgs args)
+        {
+            if (!contentFinderSettingsMemory.IsValid())
+                return;
+
+            var currentZoneId = ffxiv.GetCurrentTerritoryID();
+            if (currentZoneId.HasValue && currentZoneId.Value > 0)
             {
-                var currentZoneName = Advanced_Combat_Tracker.ActGlobals.oFormActMain.CurrentZone;
-                OnZoneChange(currentZoneId.Value, currentZoneName);
+                var currentZoneName = ActGlobals.oFormActMain.CurrentZone;
+                WriteInContentFinderSettingsLine(args.detectedTime, $"{currentZoneId.Value:X4}", currentZoneName);
+                ActGlobals.oFormActMain.BeforeLogLineRead -= LogLineHandler;
             }
         }
 
