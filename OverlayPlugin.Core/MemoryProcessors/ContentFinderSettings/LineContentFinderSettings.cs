@@ -66,7 +66,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
                 $"{zoneID}|" +
                 $"{zoneName}|" +
                 $"{settings.inContentFinderContent}|" +
-                $"{settings.ilvlSync}|" +
                 $"{settings.unrestrictedParty}|" +
                 $"{settings.minimalItemLevel}|" +
                 $"{settings.silenceEcho}|" +

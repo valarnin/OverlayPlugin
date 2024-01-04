@@ -13,7 +13,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
         byte explorerMode { get; }
         byte levelSync { get; }
 
-        ushort ilvlSync { get; }
         // TODO: Maybe we can track these down if they're ever actually needed?
         // byte lootRules { get; }
         // byte limitedLevelingRoulette { get; }
