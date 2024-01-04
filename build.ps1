@@ -25,14 +25,14 @@ try {
 
     if ($ci) {
         echo "==> Continuous integration flag set. Building Debug..."
-        dotnet publish -v quiet -c debug
+        dotnet publish -c debug
         
         if (-not $?) { exit 1 }
     }
 
     echo "==> Building..."
 
-    dotnet publish -v quiet -c release
+    dotnet publish -c release
     
     if (-not $?) { exit 1 }
 
