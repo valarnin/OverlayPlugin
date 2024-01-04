@@ -13,9 +13,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
         // IsLocalPlayerInParty:1400aa862 (after rename)
         private const string inContentFinderSignature = "803D??????????0F85????????33D2488D0D????????E8????????80B8??????????0F87";
 
-        // FUN_140829150:140829208
-        private const string contentDirectorSignature = "48833D??????????74??803D??????????74??488D0D????????E8????????488B5C24";
-
         // Client::Game::InstanceContent::PublicContentDirector.HandleEnterContentInfoPacket, call to FUN_140988430 with static address 0x14220de08
         // Static address = settingsSignature resolved address - 0x18, probably a full struct that hasn't been deconstructed yet
         // FUN_140988430 returns address + 0x20 = 0x14220de28, so settingsSignature + 0x8
@@ -32,7 +29,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
         private const int inContentSettingsOffset = 0x90;
 
         public ContentFinderSettingsMemory651(TinyIoCContainer container)
-            : base(container, settingsSignature, inContentFinderSignature, contentDirectorSignature, inContentSettingsOffset)
+            : base(container, settingsSignature, inContentFinderSignature, inContentSettingsOffset)
         { }
 
         public override Version GetVersion()

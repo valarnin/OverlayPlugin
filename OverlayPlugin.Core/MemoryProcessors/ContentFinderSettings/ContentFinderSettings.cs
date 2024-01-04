@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using RainbowMage.OverlayPlugin.MemoryProcessors.Combatant;
 
 namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
 {
@@ -24,33 +22,27 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
 
         private FFXIVMemory memory;
         private ILogger logger;
-        private ICombatantMemory combatantMemoryManager;
 
         private IntPtr settingsAddress = IntPtr.Zero;
         private IntPtr inContentFinderAddress = IntPtr.Zero;
-        private IntPtr contentDirectorAddress = IntPtr.Zero;
 
         private string settingsSignature;
         private string inContentFinderSignature;
-        private string contentDirectorSignature;
         private int inContentSettingsOffset;
 
-        public ContentFinderSettingsMemory(TinyIoCContainer container, string settingsSignature, string inContentFinderSignature, string contentDirectorSignature, int inContentSettingsOffset)
+        public ContentFinderSettingsMemory(TinyIoCContainer container, string settingsSignature, string inContentFinderSignature, int inContentSettingsOffset)
         {
             this.settingsSignature = settingsSignature;
             this.inContentFinderSignature = inContentFinderSignature;
             this.inContentSettingsOffset = inContentSettingsOffset;
-            this.contentDirectorSignature = contentDirectorSignature;
             logger = container.Resolve<ILogger>();
             memory = container.Resolve<FFXIVMemory>();
-            combatantMemoryManager = container.Resolve<ICombatantMemory>();
         }
 
         private void ResetPointers()
         {
             settingsAddress = IntPtr.Zero;
             inContentFinderAddress = IntPtr.Zero;
-            contentDirectorAddress = IntPtr.Zero;
         }
 
         private bool HasValidPointers()
@@ -58,8 +50,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
             if (settingsAddress == IntPtr.Zero)
                 return false;
             if (inContentFinderAddress == IntPtr.Zero)
-                return false;
-            if (contentDirectorAddress == IntPtr.Zero)
                 return false;
             return true;
         }
@@ -108,19 +98,6 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings
             }
 
             logger.Log(LogLevel.Debug, "inContentFinderAddress: 0x{0:X}", inContentFinderAddress.ToInt64());
-
-            list = memory.SigScan(contentDirectorSignature, -32, true, 1);
-            if (list != null && list.Count > 0)
-            {
-                contentDirectorAddress = list[0];
-            }
-            else
-            {
-                contentDirectorAddress = IntPtr.Zero;
-                fail.Add(nameof(contentDirectorAddress));
-            }
-
-            logger.Log(LogLevel.Debug, "contentDirectorAddress: 0x{0:X}", contentDirectorAddress.ToInt64());
 
             if (fail.Count == 0)
             {
