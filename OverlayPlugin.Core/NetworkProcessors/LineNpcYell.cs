@@ -28,7 +28,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             return
                 $"{actorID:X8}|" +
                 $"{nameID:X8}|" +
-                $"{yellID:X8}|";
+                $"{yellID:X8}";
         }
     }
 
