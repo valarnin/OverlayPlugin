@@ -16,27 +16,27 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
 
         public const int structSize = 48;
         [FieldOffset(0x0)]
-        public uint actorID;
+        public uint countdownStarterActorID;
         [FieldOffset(0x4)]
-        public ushort senderWorldId;
+        public ushort countdownStarterWorldId;
 
         [FieldOffset(0x6)]
-        public ushort time;
+        public ushort countdownTimeMS;
         [FieldOffset(0x8)]
-        public byte result;
+        public byte countdownResultCode;
 
         [FieldOffset(0xB)]
-        public fixed byte senderName[32];
+        public fixed byte countdownStarterName[32];
 
         public override string ToString()
         {
-            fixed (byte* name = senderName)
+            fixed (byte* name = countdownStarterName)
             {
                 return
-                    $"{actorID:X8}|" +
-                    $"{senderWorldId:X4}|" +
-                    $"{time}|" +
-                    $"{result:X2}|" +
+                    $"{countdownStarterActorID:X8}|" +
+                    $"{countdownStarterWorldId:X4}|" +
+                    $"{countdownTimeMS}|" +
+                    $"{countdownResultCode:X2}|" +
                     $"{FFXIVMemory.GetStringFromBytes(name, 32)}";
             }
         }
