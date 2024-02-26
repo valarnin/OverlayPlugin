@@ -16,14 +16,6 @@
         "RSVData": {
             "opcode": 582,
             "size": 1080
-        },
-        "NpcYell": {
-            "opcode": 101,
-            "size": 32
-        },
-        "BattleTalk2": {
-            "opcode": 475,
-            "size": 40
         }
     },
     // Global region
@@ -40,6 +32,14 @@
         "RSVData": {
             "opcode": 625,
             "size": 1080
+        },
+        "NpcYell": {
+            "opcode": 101,
+            "size": 32
+        },
+        "BattleTalk2": {
+            "opcode": 475,
+            "size": 40
         }
     },
     // KR region
