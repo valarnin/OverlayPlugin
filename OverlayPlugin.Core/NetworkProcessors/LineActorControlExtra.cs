@@ -18,6 +18,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
         private ILogger logger;
         private readonly FFXIVRepository ffxiv;
 
+        // Any category defined in this enum will be allowed as an emitted line
         public enum Server_ActorControlCategory : ushort
         {
             SetAnimationState = 62,
@@ -142,7 +143,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
                     object packet = Marshal.PtrToStructure(new IntPtr(buffer), info.actorControlType);
                     UInt16 category = (UInt16)info.fieldCategory.GetValue(packet);
 
-                    if (category == (UInt16)Server_ActorControlCategory.SetAnimationState)
+                    if (Enum.IsDefined(typeof(Server_ActorControlCategory), category))
                     {
                         UInt32 param1 = (UInt32)info.fieldParam1.GetValue(packet);
                         UInt32 param2 = (UInt32)info.fieldParam2.GetValue(packet);
