@@ -108,7 +108,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
         {
             var info = regionalized;
             if (info == null)
-              return;
+                return;
 
             if (message.Length < info.packetSize)
                 return;
