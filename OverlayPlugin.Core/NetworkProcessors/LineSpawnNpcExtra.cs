@@ -10,7 +10,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
 {
     public class LineSpawnNpcExtra
     {
-        public const uint LogFileLineID = 265;
+        public const uint LogFileLineID = 272;
         private ILogger logger;
         private readonly FFXIVRepository ffxiv;
 

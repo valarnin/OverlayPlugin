@@ -14,7 +14,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
 {
     public class LineActorControlExtra
     {
-        public const uint LogFileLineID = 266;
+        public const uint LogFileLineID = 273;
         private ILogger logger;
         private readonly FFXIVRepository ffxiv;
 
