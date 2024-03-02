@@ -6,9 +6,9 @@ using System.Runtime.InteropServices;
 
 // The easiest place to test SetAnimationState is Lunar Subteranne.
 // On the first Ruinous Confluence, each staff has this line:
-// 266|2023-12-05T10:57:43.4770000-08:00|4000A145|003E|00000001|00000000|00000000|00000000|06e7eff4a949812c
+// 273|2023-12-05T10:57:43.4770000-08:00|4000A145|003E|00000001|00000000|00000000|00000000|06e7eff4a949812c
 // On the second Ruinous Confluence, each staff has this line:
-// 266|2023-12-05T10:58:00.3460000-08:00|4000A144|003E|00000001|00000001|00000000|00000000|a4af9f90928636a3
+// 273|2023-12-05T10:58:00.3460000-08:00|4000A144|003E|00000001|00000001|00000000|00000000|a4af9f90928636a3
 
 namespace RainbowMage.OverlayPlugin.NetworkProcessors
 {
