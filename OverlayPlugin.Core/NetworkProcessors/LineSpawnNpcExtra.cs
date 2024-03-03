@@ -26,6 +26,14 @@ At initial zone-in of Barbariccia normal, there are 9 actors that spawn with `an
 03|2024-03-02T15:45:44.4890000-05:00|4000226D|Barbariccia|00|5A|0000|00||11398|14802|69200|69200|10000|10000|||100.00|100.00|0.00|0.00|70bf7f0124bc77c7
  */
 
+/*
+At initial zone-in of P10N, the primary `Pandæmonium` actor spawns with an animation state set to `01`:
+272|2024-03-02T18:29:17.2380000-05:00|40013FCB|E0000000|0000|01|57876e5fcb020437
+261|2024-03-02T18:29:16.9350000-05:00|Add|40013FCB|BNpcID|3F19|BNpcNameID|3042|CastTargetID|E0000000|CurrentMP|10000|CurrentWorldID|65535|Heading|0.0000|Level|90|MaxHP|24437980|MaxMP|10000|ModelStatus|2304|Name|Pandæmonium|NPCTargetID|E0000000|PosX|100.0000|PosY|65.0000|Radius|35.0000|Type|2|WorldID|65535|8f2b51b8e66ccb68
+This is later cleared to a state of `00` via `ActorControl` `SetAnimationState`:
+273|2024-03-02T18:36:55.8380000-05:00|40013FCB|003E|00000000|00000000|00000000|00000000|1be7b98bf67c8479
+ */
+
 namespace RainbowMage.OverlayPlugin.NetworkProcessors
 {
     public class LineSpawnNpcExtra
