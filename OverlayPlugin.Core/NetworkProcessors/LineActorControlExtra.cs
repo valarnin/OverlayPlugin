@@ -151,7 +151,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
                         UInt32 param4 = (UInt32)info.fieldParam4.GetValue(packet);
 
                         string line = string.Format(CultureInfo.InvariantCulture,
-                            "{0:X8}|{1:X4}|{2:X8}|{3:X8}|{4:X8}|{5:X8}",
+                            "{0:X8}|{1:X4}|{2:X}|{3:X}|{4:X}|{5:X}",
                             sourceId, category, param1, param2, param3, param4);
 
                         DateTime serverTime = ffxiv.EpochToDateTime(epoch);
