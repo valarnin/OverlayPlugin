@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
@@ -18,10 +19,9 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
         private ILogger logger;
         private readonly FFXIVRepository ffxiv;
 
-        // Any category defined in this enum will be allowed as an emitted line
-        public enum Server_ActorControlCategory : ushort
-        {
-            SetAnimationState = 62,
+        // Any category defined in this array will be allowed as an emitted line
+        public static readonly Server_ActorControlCategory[] AllowedActorControlCategories = {
+            Server_ActorControlCategory.SetAnimationState
         };
 
         private class RegionalizedInfo
@@ -141,9 +141,9 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
                     UInt32 sourceId = (UInt32)info.fieldCastSourceId.GetValue(header);
 
                     object packet = Marshal.PtrToStructure(new IntPtr(buffer), info.actorControlType);
-                    UInt16 category = (UInt16)info.fieldCategory.GetValue(packet);
+                    Server_ActorControlCategory category = (Server_ActorControlCategory)info.fieldCategory.GetValue(packet);
 
-                    if (Enum.IsDefined(typeof(Server_ActorControlCategory), category))
+                    if (AllowedActorControlCategories.Contains(category))
                     {
                         UInt32 param1 = (UInt32)info.fieldParam1.GetValue(packet);
                         UInt32 param2 = (UInt32)info.fieldParam2.GetValue(packet);
