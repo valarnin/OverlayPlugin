@@ -13,16 +13,15 @@ using System.Runtime.InteropServices;
 
 namespace RainbowMage.OverlayPlugin.NetworkProcessors
 {
-    public class LineActorControlExtra
+    public class LineActorControlSelfExtra
     {
-        public const uint LogFileLineID = 273;
+        public const uint LogFileLineID = 274;
         private ILogger logger;
         private readonly FFXIVRepository ffxiv;
 
         // Any category defined in this array will be allowed as an emitted line
         public static readonly Server_ActorControlCategory[] AllowedActorControlCategories = {
-            Server_ActorControlCategory.SetAnimationState,
-            Server_ActorControlCategory.DisplayPublicContentTextMessage
+            Server_ActorControlCategory.DisplayLogMessage,
         };
 
         private class RegionalizedInfo
@@ -38,6 +37,8 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             public readonly FieldInfo fieldParam2;
             public readonly FieldInfo fieldParam3;
             public readonly FieldInfo fieldParam4;
+            public readonly FieldInfo fieldParam5;
+            public readonly FieldInfo fieldParam6;
 
             public RegionalizedInfo(Type headerType, Type actorControlType, NetworkParser netHelper)
             {
@@ -49,7 +50,9 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
                 fieldParam2 = actorControlType.GetField("param2");
                 fieldParam3 = actorControlType.GetField("param3");
                 fieldParam4 = actorControlType.GetField("param4");
-                packetOpcode = netHelper.GetOpcode("ActorControl");
+                fieldParam5 = actorControlType.GetField("param5");
+                fieldParam6 = actorControlType.GetField("param6");
+                packetOpcode = netHelper.GetOpcode("ActorControlSelf");
                 packetSize = Marshal.SizeOf(actorControlType);
                 offsetMessageType = netHelper.GetOffset(headerType, "MessageType");
             }
@@ -60,7 +63,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
         private readonly Func<string, DateTime, bool> logWriter;
         private readonly NetworkParser netHelper;
 
-        public LineActorControlExtra(TinyIoCContainer container)
+        public LineActorControlSelfExtra(TinyIoCContainer container)
         {
             logger = container.Resolve<ILogger>();
             ffxiv = container.Resolve<FFXIVRepository>();
@@ -71,7 +74,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             var customLogLines = container.Resolve<FFXIVCustomLogLines>();
             logWriter = customLogLines.RegisterCustomLogLine(new LogLineRegistryEntry()
             {
-                Name = "ActorControlExtra",
+                Name = "ActorControlSelfExtra",
                 Source = "OverlayPlugin",
                 ID = LogFileLineID,
                 Version = 1,
@@ -92,17 +95,17 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
                 {
                     case GameRegion.Global:
                         {
-                            actorControlTypeStr = "Machina.FFXIV.Headers.Server_ActorControl";
+                            actorControlTypeStr = "Machina.FFXIV.Headers.Server_ActorControlSelf";
                             break;
                         }
                     case GameRegion.Korean:
                         {
-                            actorControlTypeStr = "Machina.FFXIV.Headers.Korean.Server_ActorControl";
+                            actorControlTypeStr = "Machina.FFXIV.Headers.Korean.Server_ActorControlSelf";
                             break;
                         }
                     case GameRegion.Chinese:
                         {
-                            actorControlTypeStr = "Machina.FFXIV.Headers.Chinese.Server_ActorControl";
+                            actorControlTypeStr = "Machina.FFXIV.Headers.Chinese.Server_ActorControlSelf";
                             break;
                         }
                     default:
@@ -150,10 +153,12 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
                         UInt32 param2 = (UInt32)info.fieldParam2.GetValue(packet);
                         UInt32 param3 = (UInt32)info.fieldParam3.GetValue(packet);
                         UInt32 param4 = (UInt32)info.fieldParam4.GetValue(packet);
+                        UInt32 param5 = (UInt32)info.fieldParam5.GetValue(packet);
+                        UInt32 param6 = (UInt32)info.fieldParam6.GetValue(packet);
 
                         string line = string.Format(CultureInfo.InvariantCulture,
-                            "{0:X8}|{1:X4}|{2:X}|{3:X}|{4:X}|{5:X}",
-                            sourceId, category, param1, param2, param3, param4);
+                            "{0:X8}|{1:X4}|{2:X}|{3:X}|{4:X}|{5:X}|{6:X}|{7:X}",
+                            sourceId, category, param1, param2, param3, param4, param5, param6);
 
                         DateTime serverTime = ffxiv.EpochToDateTime(epoch);
                         logWriter(line, serverTime);
