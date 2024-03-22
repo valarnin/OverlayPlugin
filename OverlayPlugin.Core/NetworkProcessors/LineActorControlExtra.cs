@@ -153,7 +153,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
 
                         string line = string.Format(CultureInfo.InvariantCulture,
                             "{0:X8}|{1:X4}|{2:X}|{3:X}|{4:X}|{5:X}",
-                            sourceId, category, param1, param2, param3, param4);
+                            sourceId, (ushort)category, param1, param2, param3, param4);
 
                         DateTime serverTime = ffxiv.EpochToDateTime(epoch);
                         logWriter(line, serverTime);

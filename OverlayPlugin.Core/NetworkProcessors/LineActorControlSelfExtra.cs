@@ -22,6 +22,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
         // Any category defined in this array will be allowed as an emitted line
         public static readonly Server_ActorControlCategory[] AllowedActorControlCategories = {
             Server_ActorControlCategory.DisplayLogMessage,
+            Server_ActorControlCategory.DisplayLogMessageParams,
         };
 
         private class RegionalizedInfo
@@ -158,7 +159,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
 
                         string line = string.Format(CultureInfo.InvariantCulture,
                             "{0:X8}|{1:X4}|{2:X}|{3:X}|{4:X}|{5:X}|{6:X}|{7:X}",
-                            sourceId, category, param1, param2, param3, param4, param5, param6);
+                            sourceId, (ushort)category, param1, param2, param3, param4, param5, param6);
 
                         DateTime serverTime = ffxiv.EpochToDateTime(epoch);
                         logWriter(line, serverTime);
