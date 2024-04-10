@@ -8,10 +8,9 @@ using RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings;
 using RainbowMage.OverlayPlugin.MemoryProcessors.InCombat;
 using RainbowMage.OverlayPlugin.NetworkProcessors;
 using RainbowMage.OverlayPlugin.Updater;
-
 using MachinaRegion = System.String;
-using OpcodeVersion = System.String;
 using OpcodeName = System.String;
+using OpcodeVersion = System.String;
 
 namespace RainbowMage.OverlayPlugin
 {
