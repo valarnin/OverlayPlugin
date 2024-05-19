@@ -36,17 +36,27 @@ This is later cleared to a state of `00` via `ActorControl` `SetAnimationState`:
 
 namespace RainbowMage.OverlayPlugin.NetworkProcessors
 {
+    using Server_NpcSpawn_Global = LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51;
+    using Server_NpcSpawn_CN = LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51;
+    using Server_NpcSpawn_KR = LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51;
+
+    using RPH = RegionalizedPacketHelper<
+            Server_MessageHeader_Global, LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51,
+            Server_MessageHeader_CN, LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51,
+            Server_MessageHeader_KR, LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51>;
+
     public class LineSpawnNpcExtra
     {
         public const uint LogFileLineID = 272;
-        private ILogger logger;
         private readonly FFXIVRepository ffxiv;
 
         private readonly Func<string, DateTime, bool> logWriter;
-        private readonly NetworkParser netHelper;
+
+        private RPH packetHelper;
+        private GameRegion? currentRegion;
 
         [StructLayout(LayoutKind.Explicit)]
-        public unsafe struct Server_NpcSpawn
+        public unsafe struct Server_NpcSpawn_Global_6_51 : IPacketStruct
         {
             [FieldOffset(0x78)]
             public uint parentActorId;
@@ -56,35 +66,22 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
 
             [FieldOffset(0xB3)]
             public byte animationState;
-        }
 
-        private class RegionalizedInfo
-        {
-            public readonly int packetSize;
-            public readonly int packetOpcode;
-            public readonly int offsetMessageType;
-            public readonly Type headerType;
-            public readonly FieldInfo fieldCastSourceId;
-
-            public RegionalizedInfo(Type headerType, NetworkParser netHelper)
+            public string ToString(long epoch, uint ActorID)
             {
-                this.headerType = headerType;
-                fieldCastSourceId = headerType.GetField("ActorID");
-                packetOpcode = netHelper.GetOpcode("NpcSpawn");
-                packetSize = Marshal.SizeOf(typeof(Server_NpcSpawn));
-                offsetMessageType = netHelper.GetOffset(headerType, "MessageType");
+                return string.Format(CultureInfo.InvariantCulture,
+                    "{0:X8}|{1:X8}|{2:X4}|{3:X2}",
+                    ActorID, parentActorId, tetherId, animationState);
             }
         }
 
-        private RegionalizedInfo regionalized;
-
         public LineSpawnNpcExtra(TinyIoCContainer container)
         {
-            logger = container.Resolve<ILogger>();
             ffxiv = container.Resolve<FFXIVRepository>();
-            netHelper = container.Resolve<NetworkParser>();
             ffxiv.RegisterNetworkParser(MessageReceived);
             ffxiv.RegisterProcessChangedHandler(ProcessChanged);
+
+            packetHelper = RPH.CreateFromMachina("Server_NpcSpawn");
 
             var customLogLines = container.Resolve<FFXIVCustomLogLines>();
             logWriter = customLogLines.RegisterCustomLogLine(new LogLineRegistryEntry()
@@ -103,9 +100,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
 
             try
             {
-                Assembly mach = Assembly.Load("Machina.FFXIV");
-                Type headerType = mach.GetType("Machina.FFXIV.Headers.Server_MessageHeader");
-                regionalized = new RegionalizedInfo(headerType, netHelper);
+                currentRegion = null;
             }
             catch
             {
@@ -114,32 +109,21 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
 
         private unsafe void MessageReceived(string id, long epoch, byte[] message)
         {
-            var info = regionalized;
-            if (info == null)
+            if (packetHelper == null)
                 return;
 
-            if (message.Length < info.packetSize)
+            if (currentRegion == null)
+                currentRegion = ffxiv.GetMachinaRegion();
+
+            if (currentRegion == null)
                 return;
 
-            fixed (byte* buffer = message)
+            var line = packetHelper[currentRegion.Value].ToString(epoch, message);
+
+            if (line != null)
             {
-                if (*(ushort*)&buffer[info.offsetMessageType] == info.packetOpcode)
-                {
-                    object header = Marshal.PtrToStructure(new IntPtr(buffer), info.headerType);
-                    UInt32 sourceId = (UInt32)info.fieldCastSourceId.GetValue(header);
-
-                    var packet = Marshal.PtrToStructure<Server_NpcSpawn>(new IntPtr(buffer));
-                    var parentActorId = packet.parentActorId;
-                    var tetherId = packet.tetherId;
-                    var animationState = packet.animationState;
-
-                    string line = string.Format(CultureInfo.InvariantCulture,
-                        "{0:X8}|{1:X8}|{2:X4}|{3:X2}",
-                        sourceId, parentActorId, tetherId, animationState);
-
-                    DateTime serverTime = ffxiv.EpochToDateTime(epoch);
-                    logWriter(line, serverTime);
-                }
+                DateTime serverTime = ffxiv.EpochToDateTime(epoch);
+                logWriter(line, serverTime);
             }
         }
     }
