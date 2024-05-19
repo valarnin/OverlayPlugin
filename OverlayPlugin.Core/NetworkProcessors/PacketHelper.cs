@@ -89,8 +89,8 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
                 switch (gameRegion)
                 {
                     case GameRegion.Global: return global;
-                    case GameRegion.Chinese: return global;
-                    case GameRegion.Korean: return global;
+                    case GameRegion.Chinese: return cn;
+                    case GameRegion.Korean: return kr;
 
                     default: return global;
                 }
