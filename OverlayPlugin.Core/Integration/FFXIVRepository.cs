@@ -354,6 +354,20 @@ namespace RainbowMage.OverlayPlugin
             }
         }
 
+        public static Dictionary<GameRegion, Dictionary<string, ushort>> GetMachinaOpcodes()
+        {
+            try
+            {
+                var mach = Assembly.Load("Machina.FFXIV");
+                var opcode_manager_type = mach.GetType("Machina.FFXIV.Headers.Opcodes.OpcodeManager");
+                var opcode_manager = opcode_manager_type.GetProperty("Instance").GetValue(null);
+                return (Dictionary<GameRegion, Dictionary<string, ushort>>)
+                    opcode_manager_type.GetField("_opcodes", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(opcode_manager);
+            }
+            catch (Exception) { }
+            return null;
+        }
+
         public GameRegion GetMachinaRegion()
         {
             try
