@@ -162,10 +162,14 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
         where PacketStruct : struct, IPacketStruct
     {
         public readonly ushort Opcode;
+        public readonly int headerSize;
+        public readonly int packetSize;
 
         public PacketHelper(ushort opcode)
         {
             Opcode = opcode;
+            headerSize = Marshal.SizeOf(typeof(HeaderStruct));
+            packetSize = Marshal.SizeOf(typeof(PacketStruct));
         }
 
         /// <summary>
@@ -197,9 +201,6 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
 
         public unsafe bool ToStructs(byte[] message, out HeaderStruct header, out PacketStruct packet)
         {
-            int headerSize = Marshal.SizeOf(typeof(HeaderStruct));
-            int packetSize = Marshal.SizeOf(typeof(PacketStruct));
-
             // Message is too short to contain this packet
             if (message.Length < headerSize + packetSize)
             {
