@@ -273,7 +273,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
 
             // Cache the map locally for subsequent calls
             if (propMap == null) propMap = typePropertyMap[packetType];
-            return (T) propMap[name].GetValue(packetValue);
+            return (T)propMap[name].GetValue(packetValue);
         }
     }
 }

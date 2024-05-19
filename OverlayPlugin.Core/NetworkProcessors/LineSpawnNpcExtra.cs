@@ -37,14 +37,13 @@ This is later cleared to a state of `00` via `ActorControl` `SetAnimationState`:
 
 namespace RainbowMage.OverlayPlugin.NetworkProcessors
 {
-    using Server_NpcSpawn_Global = LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51;
-    using Server_NpcSpawn_CN = LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51;
-    using Server_NpcSpawn_KR = LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51;
-
     using RPH = RegionalizedPacketHelper<
             Server_MessageHeader_Global, LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51,
             Server_MessageHeader_CN, LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51,
             Server_MessageHeader_KR, LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51>;
+    using Server_NpcSpawn_CN = LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51;
+    using Server_NpcSpawn_Global = LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51;
+    using Server_NpcSpawn_KR = LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51;
 
     public class LineSpawnNpcExtra
     {
