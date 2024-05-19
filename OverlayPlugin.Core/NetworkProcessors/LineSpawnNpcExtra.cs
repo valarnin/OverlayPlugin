@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper;
 
 /*
 At initial zone-in of Barbariccia normal, there are 9 actors that spawn with `animationState` of `01`:
