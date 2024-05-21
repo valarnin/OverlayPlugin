@@ -2,8 +2,6 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.InteropServices;
 using RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper;
 
 // To test `DisplayLogMessage`, you can:
@@ -25,8 +23,6 @@ using RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper;
 
 namespace RainbowMage.OverlayPlugin.NetworkProcessors
 {
-    using RPH = MachinaRegionalizedPacketHelper<Server_MessageHeader_Global, Server_MessageHeader_CN, Server_MessageHeader_KR, LineActorControlSelfExtra.ActorControlSelfExtraPacket>;
-
     public class LineActorControlSelfExtra
     {
         public const uint LogFileLineID = 274;
@@ -61,7 +57,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             }
         }
 
-        private RPH packetHelper;
+        private MachinaRegionalizedPacketHelper<ActorControlSelfExtraPacket> packetHelper;
         private GameRegion? currentRegion;
 
         private readonly Func<string, DateTime, bool> logWriter;
@@ -72,16 +68,22 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             ffxiv.RegisterNetworkParser(MessageReceived);
             ffxiv.RegisterProcessChangedHandler(ProcessChanged);
 
-            packetHelper = new RPH("Server_NpcSpawn");
-
-            var customLogLines = container.Resolve<FFXIVCustomLogLines>();
-            logWriter = customLogLines.RegisterCustomLogLine(new LogLineRegistryEntry()
+            if (MachinaRegionalizedPacketHelper<ActorControlSelfExtraPacket>.Create("Server_NpcSpawn", out packetHelper))
             {
-                Name = "ActorControlSelfExtra",
-                Source = "OverlayPlugin",
-                ID = LogFileLineID,
-                Version = 1,
-            });
+                var customLogLines = container.Resolve<FFXIVCustomLogLines>();
+                logWriter = customLogLines.RegisterCustomLogLine(new LogLineRegistryEntry()
+                {
+                    Name = "ActorControlSelfExtra",
+                    Source = "OverlayPlugin",
+                    ID = LogFileLineID,
+                    Version = 1,
+                });
+            }
+            else
+            {
+                var logger = container.Resolve<ILogger>();
+                logger.Log(LogLevel.Error, Resources.NetworkParserNoFfxiv);
+            }
         }
 
         private void ProcessChanged(Process process)

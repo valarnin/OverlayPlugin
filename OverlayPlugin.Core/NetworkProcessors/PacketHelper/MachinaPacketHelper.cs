@@ -56,7 +56,17 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
                     { GameRegion.Chinese, new ReadOnlyDictionary<string, Type>(chineseDict) },
                     { GameRegion.Korean, new ReadOnlyDictionary<string, Type>(koreanDict) },
                 });
+
+                MachinaPacketWrapper.InitTypePropertyMap(mType);
             }
+
+            // Currently Machina uses the same message header for all regions. Allow for that to change in the future.
+            HeaderType_Global = machina.GetType("Machina.FFXIV.Headers.Server_MessageHeader");
+            MachinaHeaderWrapper.InitTypePropertyMap(HeaderType_Global);
+            HeaderType_CN = machina.GetType("Machina.FFXIV.Headers.Server_MessageHeader");
+            MachinaHeaderWrapper.InitTypePropertyMap(HeaderType_CN);
+            HeaderType_KR = machina.GetType("Machina.FFXIV.Headers.Server_MessageHeader");
+            MachinaHeaderWrapper.InitTypePropertyMap(HeaderType_KR);
         }
 
         public static bool GetPacketType(GameRegion region, string name, out Type packetType)
@@ -69,62 +79,53 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
         }
     }
 
-    class MachinaRegionalizedPacketHelper<
-        HeaderStruct_Global,
-        HeaderStruct_CN,
-        HeaderStruct_KR,
-        PacketType>
-        where HeaderStruct_Global : struct, IHeaderStruct
-        where HeaderStruct_CN : struct, IHeaderStruct
-        where HeaderStruct_KR : struct, IHeaderStruct
+    class MachinaRegionalizedPacketHelper<PacketType>
         where PacketType : MachinaPacketWrapper, new()
     {
-        public readonly MachinaPacketHelper<HeaderStruct_Global, PacketType> global;
-        public readonly MachinaPacketHelper<HeaderStruct_CN, PacketType> cn;
-        public readonly MachinaPacketHelper<HeaderStruct_KR, PacketType> kr;
+        public readonly MachinaPacketHelper<PacketType> global;
+        public readonly MachinaPacketHelper<PacketType> cn;
+        public readonly MachinaPacketHelper<PacketType> kr;
 
-        // @TODO: Might make more sense to just throw an exception instead
-        public readonly bool Valid;
-
-        public MachinaRegionalizedPacketHelper(string packetTypeName)
+        private MachinaRegionalizedPacketHelper(MachinaPacketHelper<PacketType> global, MachinaPacketHelper<PacketType> cn, MachinaPacketHelper<PacketType> kr)
         {
+            this.global = global;
+            this.cn = cn;
+            this.kr = kr;
+        }
+
+        public static bool Create(string packetTypeName, out MachinaRegionalizedPacketHelper<PacketType> packetHelper)
+        {
+            packetHelper = null;
             var opcodes = FFXIVRepository.GetMachinaOpcodes();
             if (opcodes == null)
             {
-                Valid = false;
-                return;
+                return false;
             }
 
             if (!opcodes.TryGetValue(GameRegion.Global, out var globalOpcodes))
             {
-                Valid = false;
-                return;
+                return false;
             }
             if (!opcodes.TryGetValue(GameRegion.Chinese, out var cnOpcodes))
             {
-                Valid = false;
-                return;
+                return false;
             }
             if (!opcodes.TryGetValue(GameRegion.Korean, out var krOpcodes))
             {
-                Valid = false;
-                return;
+                return false;
             }
 
             if (!MachinaMap.GetPacketType(GameRegion.Global, packetTypeName, out var globalPacketType))
             {
-                Valid = false;
-                return;
+                return false;
             }
             if (!MachinaMap.GetPacketType(GameRegion.Chinese, packetTypeName, out var cnPacketType))
             {
-                Valid = false;
-                return;
+                return false;
             }
             if (!MachinaMap.GetPacketType(GameRegion.Korean, packetTypeName, out var krPacketType))
             {
-                Valid = false;
-                return;
+                return false;
             }
 
             if (!globalOpcodes.TryGetValue(packetTypeName, out var globalOpcode))
@@ -140,9 +141,13 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
                 krOpcode = 0;
             }
 
-            global = new MachinaPacketHelper<HeaderStruct_Global, PacketType>(globalOpcode, globalPacketType);
-            cn = new MachinaPacketHelper<HeaderStruct_CN, PacketType>(cnOpcode, cnPacketType);
-            kr = new MachinaPacketHelper<HeaderStruct_KR, PacketType>(krOpcode, krPacketType);
+            var global = new MachinaPacketHelper<PacketType>(globalOpcode, globalPacketType, MachinaMap.HeaderType_Global);
+            var cn = new MachinaPacketHelper<PacketType>(cnOpcode, cnPacketType, MachinaMap.HeaderType_CN);
+            var kr = new MachinaPacketHelper<PacketType>(krOpcode, krPacketType, MachinaMap.HeaderType_KR);
+
+            packetHelper = new MachinaRegionalizedPacketHelper<PacketType>(global, cn, kr);
+
+            return true;
         }
 
         public IPacketHelper this[GameRegion gameRegion]
@@ -161,21 +166,22 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
         }
     }
 
-    class MachinaPacketHelper<HeaderStruct, PacketType> : IPacketHelper
-        where HeaderStruct : struct, IHeaderStruct
+    class MachinaPacketHelper<PacketType> : IPacketHelper
         where PacketType : MachinaPacketWrapper, new()
     {
         public readonly ushort Opcode;
         public readonly int headerSize;
         public readonly int packetSize;
 
+        public readonly Type headerType;
         public readonly Type packetType;
 
-        public MachinaPacketHelper(ushort opcode, Type packetType)
+        public MachinaPacketHelper(ushort opcode, Type headerType, Type packetType)
         {
             Opcode = opcode;
-            headerSize = Marshal.SizeOf(typeof(HeaderStruct));
+            headerSize = Marshal.SizeOf(headerType);
             packetSize = Marshal.SizeOf(packetType);
+            this.headerType = headerType;
             this.packetType = packetType;
         }
 
@@ -201,17 +207,17 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
         /// <param name="epoch">epoch timestamp from FFXIV_ACT_Plugin's NetworkReceivedDelegate</param>
         /// <param name="message">Message byte array received from FFXIV_ACT_Plugin's NetworkReceivedDelegate</param>
         /// <returns>null for invalid packet, otherwise a constructed packet</returns>
-        public string ToString(long epoch, HeaderStruct header, MachinaPacketWrapper packet)
+        public string ToString(long epoch, MachinaHeaderWrapper header, MachinaPacketWrapper packet)
         {
             return packet.ToString(epoch, header.ActorID);
         }
 
-        public unsafe bool ToStructs(byte[] message, out HeaderStruct header, out PacketType packet)
+        public unsafe bool ToStructs(byte[] message, out MachinaHeaderWrapper header, out PacketType packet)
         {
             // Message is too short to contain this packet
             if (message.Length < headerSize + packetSize)
             {
-                header = default;
+                header = null;
                 packet = null;
 
                 return false;
@@ -221,11 +227,13 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
             fixed (byte* messagePtr = message)
             {
                 var ptr = new IntPtr(messagePtr);
-                header = Marshal.PtrToStructure<HeaderStruct>(ptr);
+                var headerObj = Marshal.PtrToStructure(ptr, headerType);
+
+                header = new MachinaHeaderWrapper(headerObj);
 
                 if (header.Opcode != Opcode)
                 {
-                    header = default;
+                    header = null;
                     packet = null;
 
                     return false;
@@ -242,6 +250,47 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
                 return true;
             }
         }
+    }
+
+    class MachinaHeaderWrapper : IHeaderStruct
+    {
+        public Type packetType;
+        public object header;
+
+        private static Dictionary<Type, Dictionary<string, FieldInfo>> typePropertyMap = new Dictionary<Type, Dictionary<string, FieldInfo>>();
+
+        private Dictionary<string, FieldInfo> propMap = null;
+
+        public MachinaHeaderWrapper(object header)
+        {
+            propMap = typePropertyMap[header.GetType()];
+            this.header = header;
+        }
+
+        public static void InitTypePropertyMap(Type type)
+        {
+            var dict = new Dictionary<string, FieldInfo>();
+            foreach (var fieldInfo in type.GetFields())
+            {
+                dict.Add(fieldInfo.Name, fieldInfo);
+            }
+            typePropertyMap.Add(type, dict);
+        }
+
+        public T Get<T>(string name)
+        {
+            // For performance, we don't check that the dictionary entries exist here
+            // The only times they would not exist are a compile-time error, or Machina itself removing/renaming a field/struct
+            // which would require an OverlayPlugin version bump anyways
+
+            // Cache the map locally for subsequent calls
+            if (propMap == null) propMap = typePropertyMap[packetType];
+            return (T)propMap[name].GetValue(header);
+        }
+
+        public uint ActorID => Get<uint>("ActorID");
+
+        public uint Opcode => Get<uint>("MessageType");
     }
 
     abstract class MachinaPacketWrapper : IPacketStruct
