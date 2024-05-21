@@ -361,8 +361,17 @@ namespace RainbowMage.OverlayPlugin
                 var mach = Assembly.Load("Machina.FFXIV");
                 var opcode_manager_type = mach.GetType("Machina.FFXIV.Headers.Opcodes.OpcodeManager");
                 var opcode_manager = opcode_manager_type.GetProperty("Instance").GetValue(null);
-                return (Dictionary<GameRegion, Dictionary<string, ushort>>)
-                    opcode_manager_type.GetField("_opcodes", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(opcode_manager);
+
+                // This is ugly, but C# doesn't like typecasting directly because our local `GameRegion` isn't the exact same as Machina's.
+                var machinaOpcodes = (System.Collections.IDictionary)opcode_manager_type.GetField("_opcodes", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(opcode_manager);
+
+                var opcodes = new Dictionary<GameRegion, Dictionary<string, ushort>>();
+                foreach (var key in machinaOpcodes.Keys)
+                {
+                    opcodes.Add((GameRegion)(int)key, (Dictionary<string, ushort>)machinaOpcodes[key]);
+                }
+
+                return opcodes;
             }
             catch (Exception) { }
             return null;

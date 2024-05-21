@@ -27,7 +27,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
                 var parentNamespaceName = mType.Namespace;
 
                 // Wrong namespace
-                if (!parentNamespaceName.StartsWith("Machina.FFXIV.Headers.")) continue;
+                if (!parentNamespaceName.StartsWith("Machina.FFXIV.Headers")) continue;
                 // Not a struct or enum or primitive
                 if (!mType.IsValueType) continue;
                 // Check for enum
@@ -38,9 +38,12 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
                 // Only allow structs that are fixed layout of some sort, this avoids potential exceptions when marshaling
                 if (!mType.IsExplicitLayout && !mType.IsLayoutSequential) continue;
 
+                // Don't allow inner/nested types.
+                if (mType.IsNested) continue;
+
                 switch (parentNamespaceName)
                 {
-                    case "Machina.FFXIV.Headers.Global":
+                    case "Machina.FFXIV.Headers":
                         globalDict.Add(mType.Name, mType);
                         break;
                     case "Machina.FFXIV.Headers.Chinese":
@@ -73,7 +76,14 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
         {
             packetType = null;
             if (!packetTypeMap.TryGetValue(region, out var map)) return false;
-            if (!map.TryGetValue(name, out packetType)) return false;
+            if (!map.TryGetValue(name, out packetType))
+            {
+                if (!name.StartsWith("Server_"))
+                {
+                    if (map.TryGetValue("Server_" + name, out packetType)) return true;
+                }
+                return false;
+            }
 
             return true;
         }
@@ -269,6 +279,9 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
 
         public static void InitTypePropertyMap(Type type)
         {
+            // Account for multiple regions sharing the same header
+            if (typePropertyMap.ContainsKey(type)) return;
+
             var dict = new Dictionary<string, FieldInfo>();
             foreach (var fieldInfo in type.GetFields())
             {

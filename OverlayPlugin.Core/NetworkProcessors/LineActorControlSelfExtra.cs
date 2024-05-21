@@ -68,7 +68,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             ffxiv.RegisterNetworkParser(MessageReceived);
             ffxiv.RegisterProcessChangedHandler(ProcessChanged);
 
-            if (MachinaRegionalizedPacketHelper<ActorControlSelfExtraPacket>.Create("Server_NpcSpawn", out packetHelper))
+            if (MachinaRegionalizedPacketHelper<ActorControlSelfExtraPacket>.Create("ActorControlSelf", out packetHelper))
             {
                 var customLogLines = container.Resolve<FFXIVCustomLogLines>();
                 logWriter = customLogLines.RegisterCustomLogLine(new LogLineRegistryEntry()
