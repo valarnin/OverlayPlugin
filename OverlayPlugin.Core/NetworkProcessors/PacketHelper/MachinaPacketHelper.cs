@@ -151,9 +151,9 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
                 krOpcode = 0;
             }
 
-            var global = new MachinaPacketHelper<PacketType>(globalOpcode, globalPacketType, MachinaMap.HeaderType_Global);
-            var cn = new MachinaPacketHelper<PacketType>(cnOpcode, cnPacketType, MachinaMap.HeaderType_CN);
-            var kr = new MachinaPacketHelper<PacketType>(krOpcode, krPacketType, MachinaMap.HeaderType_KR);
+            var global = new MachinaPacketHelper<PacketType>(globalOpcode, MachinaMap.HeaderType_Global, globalPacketType);
+            var cn = new MachinaPacketHelper<PacketType>(cnOpcode, MachinaMap.HeaderType_CN, cnPacketType);
+            var kr = new MachinaPacketHelper<PacketType>(krOpcode, MachinaMap.HeaderType_KR, krPacketType);
 
             packetHelper = new MachinaRegionalizedPacketHelper<PacketType>(global, cn, kr);
 
@@ -233,7 +233,6 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
                 return false;
             }
 
-
             fixed (byte* messagePtr = message)
             {
                 var ptr = new IntPtr(messagePtr);
@@ -264,16 +263,15 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
 
     class MachinaHeaderWrapper : IHeaderStruct
     {
-        public Type packetType;
         public object header;
 
         private static Dictionary<Type, Dictionary<string, FieldInfo>> typePropertyMap = new Dictionary<Type, Dictionary<string, FieldInfo>>();
 
         private Dictionary<string, FieldInfo> propMap = null;
 
-        public MachinaHeaderWrapper(object header)
+        public MachinaHeaderWrapper(object header, Type headerType = null)
         {
-            propMap = typePropertyMap[header.GetType()];
+            propMap = typePropertyMap[headerType ?? header.GetType()];
             this.header = header;
         }
 
@@ -295,15 +293,12 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
             // For performance, we don't check that the dictionary entries exist here
             // The only times they would not exist are a compile-time error, or Machina itself removing/renaming a field/struct
             // which would require an OverlayPlugin version bump anyways
-
-            // Cache the map locally for subsequent calls
-            if (propMap == null) propMap = typePropertyMap[packetType];
             return (T)propMap[name].GetValue(header);
         }
 
         public uint ActorID => Get<uint>("ActorID");
 
-        public uint Opcode => Get<uint>("MessageType");
+        public uint Opcode => Get<ushort>("MessageType");
     }
 
     abstract class MachinaPacketWrapper : IPacketStruct
