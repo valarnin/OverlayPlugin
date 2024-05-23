@@ -235,29 +235,39 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
 
             fixed (byte* messagePtr = message)
             {
-                var ptr = new IntPtr(messagePtr);
-                var headerObj = Marshal.PtrToStructure(ptr, headerType);
-
-                header = new MachinaHeaderWrapper(headerObj);
-
-                if (header.Opcode != Opcode)
-                {
-                    header = null;
-                    packet = null;
-
-                    return false;
-                }
-
-                var packetObj = Marshal.PtrToStructure(ptr, packetType);
-
-                packet = new PacketType
-                {
-                    packetType = packetType,
-                    packetValue = packetObj
-                };
-
-                return true;
+                return ToStructs(messagePtr, out header, out packet);
             }
+        }
+
+        public unsafe bool ToStructs(void* message, out MachinaHeaderWrapper header, out PacketType packet)
+        {
+            var ptr = new IntPtr(message);
+            return ToStructs(ptr, out header, out packet);
+        }
+
+        public unsafe bool ToStructs(IntPtr ptr, out MachinaHeaderWrapper header, out PacketType packet)
+        {
+            var headerObj = Marshal.PtrToStructure(ptr, headerType);
+
+            header = new MachinaHeaderWrapper(headerObj);
+
+            if (header.Opcode != Opcode)
+            {
+                header = null;
+                packet = null;
+
+                return false;
+            }
+
+            var packetObj = Marshal.PtrToStructure(ptr, packetType);
+
+            packet = new PacketType
+            {
+                packetType = packetType,
+                packetValue = packetObj
+            };
+
+            return true;
         }
     }
 
