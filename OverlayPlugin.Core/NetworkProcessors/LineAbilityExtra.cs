@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper;
 
 namespace RainbowMage.OverlayPlugin.NetworkProcessors
 {
@@ -13,141 +14,84 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
     public class LineAbilityExtra
     {
         public const uint LogFileLineID = 264;
-        private readonly ILogger logger;
         private readonly FFXIVRepository ffxiv;
-        private readonly Func<string, DateTime, bool> logWriter;
-        private readonly NetworkParser netHelper;
 
-        /**
-         * Holds information that may be specific to the current game region.
-         */
-        private RegionalizedInfo regionalized;
-
-        /**
-         * Holds information that may be specific to different game client regions
-         */
-        private class RegionalizedInfo
+        private class AbilityExtraPacket<T> : MachinaPacketWrapper
+            where T : unmanaged, IActionEffectExtra
         {
-            public readonly Dictionary<int, ActionEffectTypeInfo> opcodeToType =
-                new Dictionary<int, ActionEffectTypeInfo>();
-
-            public int minSize = Int32.MaxValue;
-            public readonly int offsetMessageType;
-            public readonly Type actionEffectHeaderType;
-            public readonly Type headerType;
-
-            public readonly FieldInfo fieldCastSourceId;
-            public readonly FieldInfo fieldAbilityId;
-            public readonly FieldInfo fieldGlobalEffectCounter;
-            public readonly FieldInfo fieldR;
-
-            public RegionalizedInfo(Assembly mach, GameRegion region, ILogger logger, NetworkParser netHelper)
+            public unsafe override string ToString(long epoch, uint ActorID)
             {
-                Func<int, string> actionEffectTypesTemplate;
-                switch (region)
+                var packetPtr = Marshal.AllocHGlobal(Marshal.SizeOf(packetValue));
+                T rawPacket = *(T*)packetPtr.ToPointer();
+
+                MachinaPacketHelper<DummyActionEffectHeaderPacket> packetHelper = (MachinaPacketHelper<DummyActionEffectHeaderPacket>)aeHelper[currentRegion.Value];
+
+                packetHelper.ToStructs(packetPtr, out var _, out var aeHeader);
+
+                // Ability ID is really 16-bit, so it is formatted as such, but we will get an
+                // exception if we try to prematurely cast it to UInt16
+                var abilityId = aeHeader.Get<uint>("actionId");
+                var globalEffectCounter = aeHeader.Get<uint>("globalEffectCounter");
+
+                if (rawPacket.actionEffectCount == 1)
                 {
-                    case GameRegion.Global:
-                        headerType = mach.GetType("Machina.FFXIV.Headers.Server_MessageHeader");
-                        actionEffectHeaderType = mach.GetType("Machina.FFXIV.Headers.Server_ActionEffectHeader");
-                        actionEffectTypesTemplate = i => "Machina.FFXIV.Headers.Server_ActionEffect" + i;
-                        break;
-                    case GameRegion.Chinese:
-                        headerType = mach.GetType("Machina.FFXIV.Headers.Server_MessageHeader");
-                        actionEffectHeaderType =
-                            mach.GetType("Machina.FFXIV.Headers.Chinese.Server_ActionEffectHeader");
-                        actionEffectTypesTemplate = i => "Machina.FFXIV.Headers.Chinese.Server_ActionEffect" + i;
-                        break;
-                    case GameRegion.Korean:
-                        headerType = mach.GetType("Machina.FFXIV.Headers.Server_MessageHeader");
-                        actionEffectHeaderType = mach.GetType("Machina.FFXIV.Headers.Korean.Server_ActionEffectHeader");
-                        actionEffectTypesTemplate = i => "Machina.FFXIV.Headers.Korean.Server_ActionEffect" + i;
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(region), region, null);
+                    // AE1 is not useful. It does not contain this data. But we still need to write something
+                    // to indicate that a proper line will not be happening.
+                    return string.Format(CultureInfo.InvariantCulture,
+                        "{0:X8}|{1:X4}|{2:X8}|{3}||||",
+                        ActorID, abilityId, globalEffectCounter, (int)LineSubType.NO_DATA);
                 }
 
-                fieldCastSourceId = headerType.GetField("ActorID");
-                fieldAbilityId = actionEffectHeaderType.GetField("actionId");
-                fieldR = actionEffectHeaderType.GetField("rotation");
-                fieldGlobalEffectCounter = actionEffectHeaderType.GetField("globalEffectCounter");
+                float x = FFXIVRepository.ConvertUInt16Coordinate(rawPacket.x);
+                float y = FFXIVRepository.ConvertUInt16Coordinate(rawPacket.y);
+                float z = FFXIVRepository.ConvertUInt16Coordinate(rawPacket.z);
 
-                int[] sizes = { 1, 8, 16, 24, 32 };
-                foreach (int size in sizes)
-                {
-                    Type aeType = mach.GetType(actionEffectTypesTemplate(size));
-                    int machinaTypeSize = Marshal.SizeOf(aeType);
-                    var actionEffectTypeInfo = new ActionEffectTypeInfo()
-                    {
-                        actionEffectSize = size,
-                        packetSize = machinaTypeSize,
-                    };
-                    minSize = Math.Min(machinaTypeSize, minSize);
-                    logger.Log(LogLevel.Debug, "ActionEffect Size {0} -> {1:X4}", size,
-                        actionEffectTypeInfo.packetSize);
-                    // Fortunately, these are currently identical between regions, so there is no need to have separate
-                    // CN/KR versions (yet). If that happens down the line, make copies of them for additional regions,
-                    // and change the switch/case statement to also consider these.
-                    switch (size)
-                    {
-                        case 8:
-                            {
-                                actionEffectTypeInfo.extraType = typeof(Server_ActionEffect8_Extra);
-                                break;
-                            }
-                        case 16:
-                            {
-                                actionEffectTypeInfo.extraType = typeof(Server_ActionEffect16_Extra);
-                                break;
-                            }
-                        case 24:
-                            {
-                                actionEffectTypeInfo.extraType = typeof(Server_ActionEffect24_Extra);
-                                break;
-                            }
-                        case 32:
-                            {
-                                actionEffectTypeInfo.extraType = typeof(Server_ActionEffect32_Extra);
-                                break;
-                            }
-                    }
-
-                    if (size != 1)
-                    {
-                        int extraSize = Marshal.SizeOf(actionEffectTypeInfo.extraType);
-                        if (machinaTypeSize != extraSize)
-                        {
-                            logger.Log(LogLevel.Error, "ActionEffect size mismatch! {} -> {}", machinaTypeSize,
-                                extraSize);
-                            actionEffectTypeInfo.hasError = true;
-                        }
-                    }
-
-                    opcodeToType.Add(netHelper.GetOpcode("Ability" + size), actionEffectTypeInfo);
-                }
-
-                offsetMessageType = netHelper.GetOffset(headerType, "MessageType");
+                var h = FFXIVRepository.ConvertHeading(aeHeader.Get<ushort>("rotation"));
+                return string.Format(CultureInfo.InvariantCulture,
+                    "{0:X8}|{1:X4}|{2:X8}|{3}|{4:F3}|{5:F3}|{6:F3}|{7:F3}",
+                    ActorID, abilityId, globalEffectCounter, (int)LineSubType.DATA_PRESENT, x, y, z, h);
             }
         }
 
-        /**
-         * Holds information specific to a particular 'size' of ActionEffect
-         */
-        private class ActionEffectTypeInfo
+        // This just exists so that we can leverage the regionalization for ActorControlSelfExtraPacket
+        private class DummyActionEffectHeaderPacket : MachinaPacketWrapper
         {
-            public int actionEffectSize;
-            public int packetSize;
-            public Type extraType;
-            public bool hasError;
+            public override string ToString(long epoch, uint ActorID)
+            {
+                return "";
+            }
         }
+
+        private MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect1_Extra>> packetHelper_1;
+        private MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect8_Extra>> packetHelper_8;
+        private MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect16_Extra>> packetHelper_16;
+        private MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect24_Extra>> packetHelper_24;
+        private MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect32_Extra>> packetHelper_32;
+        private static MachinaRegionalizedPacketHelper<DummyActionEffectHeaderPacket> aeHelper;
+        private static GameRegion? currentRegion;
+
+        private readonly Func<string, DateTime, bool> logWriter;
+        private readonly NetworkParser netHelper;
 
         interface IActionEffectExtra
         {
+            uint actionEffectCount { get; }
             ushort x { get; }
             ushort y { get; }
             ushort z { get; }
         }
 
-        [StructLayout(LayoutKind.Explicit, Pack = 1, Size = 0x29C)]
+        [StructLayout(LayoutKind.Explicit, Pack = 1)]
+        private struct Server_ActionEffect1_Extra : IActionEffectExtra
+        {
+            public uint actionEffectCount => 1;
+
+            public ushort x => 0;
+            public ushort y => 0;
+            public ushort z => 0;
+        }
+
+        [StructLayout(LayoutKind.Explicit, Pack = 1)]
         private struct Server_ActionEffect8_Extra : IActionEffectExtra
         {
             [FieldOffset(0x290)]
@@ -159,12 +103,14 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             [FieldOffset(0x294)]
             private ushort _y;
 
+            public uint actionEffectCount => 8;
+
             public ushort x => _x;
             public ushort y => _y;
             public ushort z => _z;
         }
 
-        [StructLayout(LayoutKind.Explicit, Pack = 1, Size = 0x4DC)]
+        [StructLayout(LayoutKind.Explicit, Pack = 1)]
         private struct Server_ActionEffect16_Extra : IActionEffectExtra
         {
             [FieldOffset(0x4D0)]
@@ -176,12 +122,14 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             [FieldOffset(0x4D4)]
             public ushort _y;
 
+            public uint actionEffectCount => 16;
+
             public ushort x => _x;
             public ushort y => _y;
             public ushort z => _z;
         }
 
-        [StructLayout(LayoutKind.Explicit, Pack = 1, Size = 0x71C)]
+        [StructLayout(LayoutKind.Explicit, Pack = 1)]
         private struct Server_ActionEffect24_Extra : IActionEffectExtra
         {
             [FieldOffset(0x710)]
@@ -193,12 +141,14 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             [FieldOffset(0x714)]
             public ushort _y;
 
+            public uint actionEffectCount => 24;
+
             public ushort x => _x;
             public ushort y => _y;
             public ushort z => _z;
         }
 
-        [StructLayout(LayoutKind.Explicit, Pack = 1, Size = 0x95C)]
+        [StructLayout(LayoutKind.Explicit, Pack = 1)]
         private struct Server_ActionEffect32_Extra : IActionEffectExtra
         {
             [FieldOffset(0x950)]
@@ -209,6 +159,8 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
 
             [FieldOffset(0x954)]
             public ushort _y;
+
+            public uint actionEffectCount => 32;
 
             public ushort x => _x;
             public ushort y => _y;
@@ -225,11 +177,10 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
 
         public LineAbilityExtra(TinyIoCContainer container)
         {
-            logger = container.Resolve<ILogger>();
             ffxiv = container.Resolve<FFXIVRepository>();
-            netHelper = container.Resolve<NetworkParser>();
             if (!ffxiv.IsFFXIVPluginPresent())
                 return;
+            netHelper = container.Resolve<NetworkParser>();
             ffxiv.RegisterNetworkParser(MessageReceived);
             ffxiv.RegisterProcessChangedHandler(ProcessChanged);
 
@@ -243,92 +194,59 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             });
         }
 
-        // Load regionalized data when the game region changes
         private void ProcessChanged(Process process)
         {
-            GameRegion region = ffxiv.GetMachinaRegion();
             if (!ffxiv.IsFFXIVPluginPresent())
                 return;
+
             try
             {
-                Assembly mach = Assembly.Load("Machina.FFXIV");
-                RegionalizedInfo info = new RegionalizedInfo(mach, region, logger, netHelper);
-                regionalized = info;
+                currentRegion = null;
             }
-            catch (System.IO.FileNotFoundException)
+            catch
             {
-                logger.Log(LogLevel.Error, Resources.NetworkParserNoFfxiv);
-            }
-            catch (Exception e)
-            {
-                logger.Log(LogLevel.Error, Resources.NetworkParserInitException, e);
             }
         }
 
         private unsafe void MessageReceived(string id, long epoch, byte[] message)
         {
-            RegionalizedInfo regInfo = regionalized;
-            if (regInfo == null)
+            if (packetHelper_32 == null)
                 return;
 
-            if (message.Length < regInfo.minSize)
+            if (currentRegion == null)
+                currentRegion = ffxiv.GetMachinaRegion();
+
+            if (currentRegion == null)
                 return;
 
-            fixed (byte* buffer = message)
+            var line = packetHelper_1[currentRegion.Value].ToString(epoch, message);
+
+            if (line == null)
             {
-                int opCode = *(ushort*)&buffer[regInfo.offsetMessageType];
-                ActionEffectTypeInfo info;
-                bool result = regInfo.opcodeToType.TryGetValue(opCode, out info);
-                if (result)
-                {
-                    if (message.Length < info.packetSize)
-                    {
-                        return;
-                    }
+                line = packetHelper_8[currentRegion.Value].ToString(epoch, message);
+            }
 
-                    DateTime serverTime = ffxiv.EpochToDateTime(epoch);
+            if (line == null)
+            {
+                line = packetHelper_16[currentRegion.Value].ToString(epoch, message);
+            }
 
-                    object header = Marshal.PtrToStructure(new IntPtr(buffer), regInfo.headerType);
-                    UInt32 sourceId = (UInt32)regInfo.fieldCastSourceId.GetValue(header);
+            if (line == null)
+            {
+                line = packetHelper_24[currentRegion.Value].ToString(epoch, message);
+            }
 
-                    object aeHeader = Marshal.PtrToStructure(new IntPtr(buffer), regInfo.actionEffectHeaderType);
-                    // Ability ID is really 16-bit, so it is formatted as such, but we will get an
-                    // exception if we try to prematurely cast it to UInt16
-                    UInt32 abilityId = (UInt32)regInfo.fieldAbilityId.GetValue(aeHeader);
-                    UInt32 globalEffectCounter = (UInt32)regInfo.fieldGlobalEffectCounter.GetValue(aeHeader);
+            if (line == null)
+            {
+                line = packetHelper_32[currentRegion.Value].ToString(epoch, message);
+            }
 
-                    if (info.actionEffectSize == 1)
-                    {
-                        // AE1 is not useful. It does not contain this data. But we still need to write something
-                        // to indicate that a proper line will not be happening.
-                        logWriter(string.Format(CultureInfo.InvariantCulture,
-                            "{0:X8}|{1:X4}|{2:X8}|{3}||||",
-                            sourceId, abilityId, globalEffectCounter, (int)LineSubType.NO_DATA), serverTime);
-                        return;
-                    }
+            if (line != null)
+            {
+                DateTime serverTime = ffxiv.EpochToDateTime(epoch);
+                logWriter(line, serverTime);
 
-                    if (info.hasError)
-                    {
-                        logWriter(string.Format(CultureInfo.InvariantCulture,
-                            "{0:X8}|{1:X4}|{2:X8}|{3}||||",
-                            sourceId, abilityId, globalEffectCounter, (int)LineSubType.ERROR), serverTime);
-                        return;
-                    }
-
-                    IActionEffectExtra aeExtra =
-                        (IActionEffectExtra)Marshal.PtrToStructure(new IntPtr(buffer), info.extraType);
-
-                    float x = ffxiv.ConvertUInt16Coordinate(aeExtra.x);
-                    float y = ffxiv.ConvertUInt16Coordinate(aeExtra.y);
-                    float z = ffxiv.ConvertUInt16Coordinate(aeExtra.z);
-
-                    double h = ffxiv.ConvertHeading((ushort)regInfo.fieldR.GetValue(aeHeader));
-                    string line = string.Format(CultureInfo.InvariantCulture,
-                        "{0:X8}|{1:X4}|{2:X8}|{3}|{4:F3}|{5:F3}|{6:F3}|{7:F3}",
-                        sourceId, abilityId, globalEffectCounter, (int)LineSubType.DATA_PRESENT, x, y, z, h);
-
-                    logWriter(line, serverTime);
-                }
+                return;
             }
         }
     }
