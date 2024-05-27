@@ -220,14 +220,37 @@ namespace RainbowMage.OverlayPlugin
             get
             {
                 var version = repository.GetGameVersion();
-                if (version == null)
+                if (version == null || version == "")
                 {
-                    LogException("Could not detect game version from FFXIV_ACT_Plugin");
-                    return null;
+                    LogException($"Could not detect game version from FFXIV_ACT_Plugin, defaulting to latest version for region {machinaRegion}");
+
+                    var possibleVersions = new List<string>();
+                    if (opcodesFile.ContainsKey(machinaRegion))
+                    {
+                        foreach (var key in opcodesFile[machinaRegion].Keys)
+                            possibleVersions.Add(key);
+                    }
+
+                    if (opcodesConfig.ContainsKey(machinaRegion))
+                    {
+                        foreach (var key in opcodesConfig[machinaRegion].Keys)
+                            possibleVersions.Add(key);
+                    }
+                    possibleVersions.Sort();
+
+                    if (possibleVersions.Count > 0)
+                    {
+                        version = possibleVersions[possibleVersions.Count - 1];
+                        LogException($"Detected most recent version for {machinaRegion} = {version}");
+                    }
+                    else
+                    {
+                        LogException($"Could not determine latest version for region {machinaRegion}");
+                        return null;
+                    }
                 }
 
-                IOpcodeConfigEntry opcode = null;
-                opcode = GetOpcode(name, opcodesConfig, version, "config", machinaRegion);
+                var opcode = GetOpcode(name, opcodesConfig, version, "config", machinaRegion);
                 if (opcode == null)
                 {
                     opcode = GetOpcode(name, opcodesFile, version, "file", machinaRegion);
