@@ -45,11 +45,11 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
                 if (!AllowedActorControlCategories.Contains(category)) return null;
 
                 var param1 = Get<UInt32>("param1");
-                var param2 = Get<UInt32>("param1");
-                var param3 = Get<UInt32>("param1");
-                var param4 = Get<UInt32>("param1");
-                var param5 = Get<UInt32>("param1");
-                var param6 = Get<UInt32>("param1");
+                var param2 = Get<UInt32>("param2");
+                var param3 = Get<UInt32>("param3");
+                var param4 = Get<UInt32>("param4");
+                var param5 = Get<UInt32>("param5");
+                var param6 = Get<UInt32>("param6");
 
                 return string.Format(CultureInfo.InvariantCulture,
                     "{0:X8}|{1:X4}|{2:X}|{3:X}|{4:X}|{5:X}|{6:X}|{7:X}",
