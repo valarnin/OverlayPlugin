@@ -24,7 +24,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
                 var packetPtr = Marshal.AllocHGlobal(Marshal.SizeOf(packetValue));
                 T rawPacket = *(T*)packetPtr.ToPointer();
 
-                MachinaPacketHelper<DummyActionEffectHeaderPacket> packetHelper = (MachinaPacketHelper<DummyActionEffectHeaderPacket>)aeHelper[currentRegion.Value];
+                MachinaPacketHelper<AbilityExtraPacket<Server_ActionEffect1_Extra>> packetHelper = (MachinaPacketHelper<AbilityExtraPacket<Server_ActionEffect1_Extra>>)aeHelper[currentRegion.Value];
 
                 packetHelper.ToStructs(packetPtr, out var _, out var aeHeader);
 
@@ -53,25 +53,19 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             }
         }
 
-        // This just exists so that we can leverage the regionalization for ActorControlSelfExtraPacket
-        private class DummyActionEffectHeaderPacket : MachinaPacketWrapper
-        {
-            public override string ToString(long epoch, uint ActorID)
-            {
-                return "";
-            }
-        }
-
         private MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect1_Extra>> packetHelper_1;
         private MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect8_Extra>> packetHelper_8;
         private MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect16_Extra>> packetHelper_16;
         private MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect24_Extra>> packetHelper_24;
         private MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect32_Extra>> packetHelper_32;
-        private static MachinaRegionalizedPacketHelper<DummyActionEffectHeaderPacket> aeHelper;
-        private static GameRegion? currentRegion;
 
+        // Just use the smallest expected packet for this helper
+        // We don't care if actual packet data is mangled in the struct, this is just to access the header
+        private static MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect1_Extra>> aeHelper;
+
+        private static GameRegion? currentRegion;
+        private ILogger logger;
         private readonly Func<string, DateTime, bool> logWriter;
-        private readonly NetworkParser netHelper;
 
         interface IActionEffectExtra
         {
@@ -180,9 +174,45 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             ffxiv = container.Resolve<FFXIVRepository>();
             if (!ffxiv.IsFFXIVPluginPresent())
                 return;
-            netHelper = container.Resolve<NetworkParser>();
+            logger = container.Resolve<ILogger>();
             ffxiv.RegisterNetworkParser(MessageReceived);
             ffxiv.RegisterProcessChangedHandler(ProcessChanged);
+
+            if (!MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect1_Extra>>.Create("ActionEffect1", out packetHelper_1))
+            {
+                logger.Log(LogLevel.Error, "Failed to initialize LineAbilityExtra: Creating ActionEffect1 failed");
+                return;
+            }
+
+            if (!MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect8_Extra>>.Create("ActionEffect8", out packetHelper_8))
+            {
+                logger.Log(LogLevel.Error, "Failed to initialize LineAbilityExtra: Creating ActionEffect8 failed");
+                return;
+            }
+
+            if (!MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect16_Extra>>.Create("ActionEffect16", out packetHelper_16))
+            {
+                logger.Log(LogLevel.Error, "Failed to initialize LineAbilityExtra: Creating ActionEffect16 failed");
+                return;
+            }
+
+            if (!MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect24_Extra>>.Create("ActionEffect24", out packetHelper_24))
+            {
+                logger.Log(LogLevel.Error, "Failed to initialize LineAbilityExtra: Creating ActionEffect24 failed");
+                return;
+            }
+
+            if (!MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect32_Extra>>.Create("ActionEffect32", out packetHelper_32))
+            {
+                logger.Log(LogLevel.Error, "Failed to initialize LineAbilityExtra: Creating ActionEffect32 failed");
+                return;
+            }
+
+            if (!MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect1_Extra>>.Create("ActionEffect1", out aeHelper))
+            {
+                logger.Log(LogLevel.Error, "Failed to initialize LineAbilityExtra: Creating ActionEffect1 header helper failed");
+                return;
+            }
 
             var customLogLines = container.Resolve<FFXIVCustomLogLines>();
             logWriter = customLogLines.RegisterCustomLogLine(new LogLineRegistryEntry()
@@ -199,13 +229,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             if (!ffxiv.IsFFXIVPluginPresent())
                 return;
 
-            try
-            {
-                currentRegion = null;
-            }
-            catch
-            {
-            }
+            currentRegion = null;
         }
 
         private unsafe void MessageReceived(string id, long epoch, byte[] message)
