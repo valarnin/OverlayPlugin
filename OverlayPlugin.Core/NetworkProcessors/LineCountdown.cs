@@ -6,12 +6,10 @@ using RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper;
 
 namespace RainbowMage.OverlayPlugin.NetworkProcessors
 {
-    using RPH = RegionalizedPacketHelper<
+    class LineCountdown : LineBaseCustom<
             Server_MessageHeader_Global, LineCountdown.Countdown_v655,
             Server_MessageHeader_CN, LineCountdown.Countdown_v655,
-            Server_MessageHeader_KR, LineCountdown.Countdown_v655>;
-
-    public class LineCountdown
+            Server_MessageHeader_KR, LineCountdown.Countdown_v655>
     {
         [StructLayout(LayoutKind.Explicit, Size = structSize, Pack = 1)]
         internal unsafe struct Countdown_v655 : IPacketStruct
@@ -51,66 +49,10 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
         }
 
         public const uint LogFileLineID = 268;
-
-        private readonly FFXIVRepository ffxiv;
-
-        private Func<string, DateTime, bool> logWriter;
-        private RPH packetHelper;
-        private GameRegion? currentRegion;
+        public const string logLineName = "Countdown";
+        public const string MachinaPacketName = "Countdown";
 
         public LineCountdown(TinyIoCContainer container)
-        {
-            ffxiv = container.Resolve<FFXIVRepository>();
-            ffxiv.RegisterNetworkParser(MessageReceived);
-            ffxiv.RegisterProcessChangedHandler(ProcessChanged);
-
-            var opcodeConfig = container.Resolve<OverlayPluginLogLineConfig>();
-
-            packetHelper = RPH.CreateFromOpcodeConfig(opcodeConfig, "Countdown");
-
-            if (packetHelper == null)
-            {
-                var logger = container.Resolve<ILogger>();
-                logger.Log(LogLevel.Error, "Failed to initialize LineCountdown: Failed to create Countdown packet helper from opcode configs and native structs");
-                return;
-            }
-
-            var customLogLines = container.Resolve<FFXIVCustomLogLines>();
-            this.logWriter = customLogLines.RegisterCustomLogLine(new LogLineRegistryEntry()
-            {
-                Name = "Countdown",
-                Source = "OverlayPlugin",
-                ID = LogFileLineID,
-                Version = 1,
-            });
-        }
-
-        private void ProcessChanged(Process process)
-        {
-            if (!ffxiv.IsFFXIVPluginPresent())
-                return;
-
-            currentRegion = null;
-        }
-
-        private unsafe void MessageReceived(string id, long epoch, byte[] message)
-        {
-            if (packetHelper == null)
-                return;
-
-            if (currentRegion == null)
-                currentRegion = ffxiv.GetMachinaRegion();
-
-            if (currentRegion == null)
-                return;
-
-            var line = packetHelper[currentRegion.Value].ToString(epoch, message);
-
-            if (line != null)
-            {
-                DateTime serverTime = ffxiv.EpochToDateTime(epoch);
-                logWriter(line, serverTime);
-            }
-        }
+            : base(container, LogFileLineID, logLineName, MachinaPacketName) { }
     }
 }

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper;
@@ -23,10 +22,11 @@ using RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper;
 
 namespace RainbowMage.OverlayPlugin.NetworkProcessors
 {
-    public class LineActorControlSelfExtra
+    class LineActorControlSelfExtra : LineBaseSubMachina<LineActorControlSelfExtra.ActorControlSelfExtraPacket>
     {
         public const uint LogFileLineID = 274;
-        private readonly FFXIVRepository ffxiv;
+        public const string LogLineName = "ActorControlSelfExtra";
+        public const string MachinaPacketName = "ActorControlSelf";
 
         // Any category defined in this array will be allowed as an emitted line
         public static readonly Server_ActorControlCategory[] AllowedActorControlCategories = {
@@ -56,62 +56,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
                     ActorID, category, param1, param2, param3, param4, param5, param6);
             }
         }
-
-        private MachinaRegionalizedPacketHelper<ActorControlSelfExtraPacket> packetHelper;
-        private GameRegion? currentRegion;
-
-        private readonly Func<string, DateTime, bool> logWriter;
-
         public LineActorControlSelfExtra(TinyIoCContainer container)
-        {
-            ffxiv = container.Resolve<FFXIVRepository>();
-            ffxiv.RegisterNetworkParser(MessageReceived);
-            ffxiv.RegisterProcessChangedHandler(ProcessChanged);
-
-            if (MachinaRegionalizedPacketHelper<ActorControlSelfExtraPacket>.Create("ActorControlSelf", out packetHelper))
-            {
-                var customLogLines = container.Resolve<FFXIVCustomLogLines>();
-                logWriter = customLogLines.RegisterCustomLogLine(new LogLineRegistryEntry()
-                {
-                    Name = "ActorControlSelfExtra",
-                    Source = "OverlayPlugin",
-                    ID = LogFileLineID,
-                    Version = 1,
-                });
-            }
-            else
-            {
-                var logger = container.Resolve<ILogger>();
-                logger.Log(LogLevel.Error, "Failed to initialize LineSpawnNpcExtra: Failed to create NpcSpawn packet helper from Machina structs");
-            }
-        }
-
-        private void ProcessChanged(Process process)
-        {
-            if (!ffxiv.IsFFXIVPluginPresent())
-                return;
-
-            currentRegion = null;
-        }
-
-        private unsafe void MessageReceived(string id, long epoch, byte[] message)
-        {
-            if (packetHelper == null)
-                return;
-
-            if (currentRegion == null)
-                currentRegion = ffxiv.GetMachinaRegion();
-
-            if (currentRegion == null)
-                return;
-
-            var line = packetHelper[currentRegion.Value].ToString(epoch, message);
-
-            if (line != null)
-            {
-                DateTime serverTime = ffxiv.EpochToDateTime(epoch);
-                logWriter(line, serverTime);
-            }
-        }
+            : base(container, LogFileLineID, LogLineName, MachinaPacketName) { }
     }
 }

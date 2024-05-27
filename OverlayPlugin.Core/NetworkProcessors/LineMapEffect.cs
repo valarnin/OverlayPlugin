@@ -5,12 +5,10 @@ using RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper;
 
 namespace RainbowMage.OverlayPlugin.NetworkProcessors
 {
-    using RPH = RegionalizedPacketHelper<
+    class LineMapEffect : LineBaseCustom<
             Server_MessageHeader_Global, LineMapEffect.MapEffect_v62,
             Server_MessageHeader_CN, LineMapEffect.MapEffect_v62,
-            Server_MessageHeader_KR, LineMapEffect.MapEffect_v62>;
-
-    public class LineMapEffect
+            Server_MessageHeader_KR, LineMapEffect.MapEffect_v62>
     {
         [StructLayout(LayoutKind.Explicit)]
         internal struct MapEffect_v62 : IPacketStruct
@@ -33,67 +31,10 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
         }
 
         public const uint LogFileLineID = 257;
-
-        private readonly FFXIVRepository ffxiv;
-
-        private Func<string, DateTime, bool> logWriter;
-        private RPH packetHelper;
-        private GameRegion? currentRegion;
+        public const string logLineName = "MapEffect";
+        public const string MachinaPacketName = "MapEffect";
 
         public LineMapEffect(TinyIoCContainer container)
-        {
-            ffxiv = container.Resolve<FFXIVRepository>();
-            ffxiv.RegisterNetworkParser(MessageReceived);
-            ffxiv.RegisterProcessChangedHandler(ProcessChanged);
-
-            var opcodeConfig = container.Resolve<OverlayPluginLogLineConfig>();
-
-            packetHelper = RPH.CreateFromOpcodeConfig(opcodeConfig, "MapEffect");
-
-            if (packetHelper == null)
-            {
-                var logger = container.Resolve<ILogger>();
-                logger.Log(LogLevel.Error, "Failed to initialize LineMapEffect: Failed to create MapEffect packet helper from opcode configs and native structs");
-                return;
-            }
-
-            var customLogLines = container.Resolve<FFXIVCustomLogLines>();
-            this.logWriter = customLogLines.RegisterCustomLogLine(new LogLineRegistryEntry()
-            {
-                Name = "MapEffect",
-                Source = "OverlayPlugin",
-                ID = LogFileLineID,
-                Version = 1,
-            });
-        }
-
-        private void ProcessChanged(Process process)
-        {
-            if (!ffxiv.IsFFXIVPluginPresent())
-                return;
-
-            currentRegion = null;
-        }
-
-        private unsafe void MessageReceived(string id, long epoch, byte[] message)
-        {
-            if (packetHelper == null)
-                return;
-
-            if (currentRegion == null)
-                currentRegion = ffxiv.GetMachinaRegion();
-
-            if (currentRegion == null)
-                return;
-
-            var line = packetHelper[currentRegion.Value].ToString(epoch, message);
-
-            if (line != null)
-            {
-                DateTime serverTime = ffxiv.EpochToDateTime(epoch);
-                logWriter(line, serverTime);
-            }
-        }
-
+            : base(container, LogFileLineID, logLineName, MachinaPacketName) { }
     }
 }

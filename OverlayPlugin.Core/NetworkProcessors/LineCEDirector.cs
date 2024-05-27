@@ -6,12 +6,10 @@ using RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper;
 
 namespace RainbowMage.OverlayPlugin.NetworkProcessors
 {
-    using RPH = RegionalizedPacketHelper<
+    class LineCEDirector : LineBaseCustom<
             Server_MessageHeader_Global, LineCEDirector.CEDirector_v62,
             Server_MessageHeader_CN, LineCEDirector.CEDirector_v62,
-            Server_MessageHeader_KR, LineCEDirector.CEDirector_v62>;
-
-    public class LineCEDirector
+            Server_MessageHeader_KR, LineCEDirector.CEDirector_v62>
     {
         [StructLayout(LayoutKind.Explicit)]
         internal struct CEDirector_v62 : IPacketStruct
@@ -79,73 +77,17 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             }
         }
         public const uint LogFileLineID = 259;
-
-        private readonly FFXIVRepository ffxiv;
-
-        private Func<string, DateTime, bool> logWriter;
-        private RPH packetHelper;
-        private GameRegion? currentRegion;
+        public const string logLineName = "CEDirector";
+        public const string MachinaPacketName = "CEDirector";
 
         // Used to reduce spam of these packets to log file
         // Only emit a line if it doesn't match the last line for this CE ID
         private static Dictionary<byte, string> ces = new Dictionary<byte, string>();
 
         public LineCEDirector(TinyIoCContainer container)
+            : base(container, LogFileLineID, logLineName, MachinaPacketName)
         {
-            ffxiv = container.Resolve<FFXIVRepository>();
-            ffxiv.RegisterNetworkParser(MessageReceived);
-            ffxiv.RegisterProcessChangedHandler(ProcessChanged);
-
-            var opcodeConfig = container.Resolve<OverlayPluginLogLineConfig>();
-
-            packetHelper = RPH.CreateFromOpcodeConfig(opcodeConfig, "CEDirector");
-
-            if (packetHelper == null)
-            {
-                var logger = container.Resolve<ILogger>();
-                logger.Log(LogLevel.Error, "Failed to initialize LineCEDirector: Failed to create CEDirector packet helper from opcode configs and native structs");
-                return;
-            }
-
-            var customLogLines = container.Resolve<FFXIVCustomLogLines>();
-            this.logWriter = customLogLines.RegisterCustomLogLine(new LogLineRegistryEntry()
-            {
-                Name = "CEDirector",
-                Source = "OverlayPlugin",
-                ID = LogFileLineID,
-                Version = 1,
-            });
-
             ffxiv.RegisterZoneChangeDelegate((zoneID, zoneName) => ces.Clear());
         }
-
-        private void ProcessChanged(Process process)
-        {
-            if (!ffxiv.IsFFXIVPluginPresent())
-                return;
-
-            currentRegion = null;
-        }
-
-        private unsafe void MessageReceived(string id, long epoch, byte[] message)
-        {
-            if (packetHelper == null)
-                return;
-
-            if (currentRegion == null)
-                currentRegion = ffxiv.GetMachinaRegion();
-
-            if (currentRegion == null)
-                return;
-
-            var line = packetHelper[currentRegion.Value].ToString(epoch, message);
-
-            if (line != null)
-            {
-                DateTime serverTime = ffxiv.EpochToDateTime(epoch);
-                logWriter(line, serverTime);
-            }
-        }
-
     }
 }

@@ -11,12 +11,13 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
     /**
      * Class for position/angle info from ActionEffect (i.e. line 21/22).
      */
-    public class LineAbilityExtra
+    class LineAbilityExtra : LineBaseSubMachina<LineAbilityExtra.AbilityExtraPacket<LineAbilityExtra.Server_ActionEffect1_Extra>>
     {
         public const uint LogFileLineID = 264;
-        private readonly FFXIVRepository ffxiv;
+        public const string LogLineName = "AbilityExtra";
+        public const string MachinaPacketName = "ActionEffect1";
 
-        private class AbilityExtraPacket<T> : MachinaPacketWrapper
+        internal class AbilityExtraPacket<T> : MachinaPacketWrapper
             where T : unmanaged, IActionEffectExtra
         {
             public unsafe override string ToString(long epoch, uint ActorID)
@@ -24,7 +25,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
                 var packetPtr = Marshal.AllocHGlobal(Marshal.SizeOf(packetValue));
                 T rawPacket = *(T*)packetPtr.ToPointer();
 
-                MachinaPacketHelper<AbilityExtraPacket<Server_ActionEffect1_Extra>> packetHelper = (MachinaPacketHelper<AbilityExtraPacket<Server_ActionEffect1_Extra>>)aeHelper[currentRegion.Value];
+                MachinaPacketHelper<AbilityExtraPacket<Server_ActionEffect1_Extra>> packetHelper = (MachinaPacketHelper<AbilityExtraPacket<Server_ActionEffect1_Extra>>)aeHelper[staticRegion.Value];
 
                 packetHelper.ToStructs(packetPtr, out var _, out var aeHeader);
 
@@ -53,21 +54,18 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             }
         }
 
-        private MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect1_Extra>> packetHelper_1;
+        // Just use the smallest expected packet for the default `packetHelper` implementation
+        // We don't care if actual packet data is mangled in the struct, it is just to access the header data
+        private static MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect1_Extra>> aeHelper;
+
         private MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect8_Extra>> packetHelper_8;
         private MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect16_Extra>> packetHelper_16;
         private MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect24_Extra>> packetHelper_24;
         private MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect32_Extra>> packetHelper_32;
 
-        // Just use the smallest expected packet for this helper
-        // We don't care if actual packet data is mangled in the struct, this is just to access the header
-        private static MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect1_Extra>> aeHelper;
+        protected static GameRegion? staticRegion;
 
-        private static GameRegion? currentRegion;
-        private ILogger logger;
-        private readonly Func<string, DateTime, bool> logWriter;
-
-        interface IActionEffectExtra
+        internal interface IActionEffectExtra
         {
             uint actionEffectCount { get; }
             ushort x { get; }
@@ -76,7 +74,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
         }
 
         [StructLayout(LayoutKind.Explicit, Pack = 1)]
-        private struct Server_ActionEffect1_Extra : IActionEffectExtra
+        internal struct Server_ActionEffect1_Extra : IActionEffectExtra
         {
             public uint actionEffectCount => 1;
 
@@ -86,7 +84,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
         }
 
         [StructLayout(LayoutKind.Explicit, Pack = 1)]
-        private struct Server_ActionEffect8_Extra : IActionEffectExtra
+        internal struct Server_ActionEffect8_Extra : IActionEffectExtra
         {
             [FieldOffset(0x290)]
             private ushort _x;
@@ -105,7 +103,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
         }
 
         [StructLayout(LayoutKind.Explicit, Pack = 1)]
-        private struct Server_ActionEffect16_Extra : IActionEffectExtra
+        internal struct Server_ActionEffect16_Extra : IActionEffectExtra
         {
             [FieldOffset(0x4D0)]
             public ushort _x;
@@ -124,7 +122,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
         }
 
         [StructLayout(LayoutKind.Explicit, Pack = 1)]
-        private struct Server_ActionEffect24_Extra : IActionEffectExtra
+        internal struct Server_ActionEffect24_Extra : IActionEffectExtra
         {
             [FieldOffset(0x710)]
             public ushort _x;
@@ -143,7 +141,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
         }
 
         [StructLayout(LayoutKind.Explicit, Pack = 1)]
-        private struct Server_ActionEffect32_Extra : IActionEffectExtra
+        internal struct Server_ActionEffect32_Extra : IActionEffectExtra
         {
             [FieldOffset(0x950)]
             public ushort _x;
@@ -169,20 +167,11 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             ERROR = 256
         }
 
-        public LineAbilityExtra(TinyIoCContainer container)
+        public LineAbilityExtra(TinyIoCContainer container) : base(container, LogFileLineID, LogLineName, MachinaPacketName)
         {
-            ffxiv = container.Resolve<FFXIVRepository>();
-            if (!ffxiv.IsFFXIVPluginPresent())
-                return;
-            logger = container.Resolve<ILogger>();
-            ffxiv.RegisterNetworkParser(MessageReceived);
-            ffxiv.RegisterProcessChangedHandler(ProcessChanged);
+            aeHelper = packetHelper;
 
-            if (!MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect1_Extra>>.Create("ActionEffect1", out packetHelper_1))
-            {
-                logger.Log(LogLevel.Error, "Failed to initialize LineAbilityExtra: Creating ActionEffect1 failed");
-                return;
-            }
+            var logger = container.Resolve<ILogger>();
 
             if (!MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect8_Extra>>.Create("ActionEffect8", out packetHelper_8))
             {
@@ -207,62 +196,46 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
                 logger.Log(LogLevel.Error, "Failed to initialize LineAbilityExtra: Creating ActionEffect32 failed");
                 return;
             }
-
-            if (!MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect1_Extra>>.Create("ActionEffect1", out aeHelper))
-            {
-                logger.Log(LogLevel.Error, "Failed to initialize LineAbilityExtra: Creating ActionEffect1 header helper failed");
-                return;
-            }
-
-            var customLogLines = container.Resolve<FFXIVCustomLogLines>();
-            logWriter = customLogLines.RegisterCustomLogLine(new LogLineRegistryEntry()
-            {
-                Name = "AbilityExtra",
-                Source = "OverlayPlugin",
-                ID = LogFileLineID,
-                Version = 1,
-            });
         }
 
-        private void ProcessChanged(Process process)
+        protected override void ProcessChanged(Process process)
         {
-            if (!ffxiv.IsFFXIVPluginPresent())
-                return;
+            base.ProcessChanged(process);
 
-            currentRegion = null;
+            staticRegion = null;
         }
 
-        private unsafe void MessageReceived(string id, long epoch, byte[] message)
+        protected override unsafe void MessageReceived(string id, long epoch, byte[] message)
         {
             if (packetHelper_32 == null)
                 return;
 
-            if (currentRegion == null)
-                currentRegion = ffxiv.GetMachinaRegion();
+            if (staticRegion == null)
+                staticRegion = ffxiv.GetMachinaRegion();
 
-            if (currentRegion == null)
+            if (staticRegion == null)
                 return;
 
-            var line = packetHelper_1[currentRegion.Value].ToString(epoch, message);
+            var line = packetHelper[staticRegion.Value].ToString(epoch, message);
 
             if (line == null)
             {
-                line = packetHelper_8[currentRegion.Value].ToString(epoch, message);
+                line = packetHelper_8[staticRegion.Value].ToString(epoch, message);
             }
 
             if (line == null)
             {
-                line = packetHelper_16[currentRegion.Value].ToString(epoch, message);
+                line = packetHelper_16[staticRegion.Value].ToString(epoch, message);
             }
 
             if (line == null)
             {
-                line = packetHelper_24[currentRegion.Value].ToString(epoch, message);
+                line = packetHelper_24[staticRegion.Value].ToString(epoch, message);
             }
 
             if (line == null)
             {
-                line = packetHelper_32[currentRegion.Value].ToString(epoch, message);
+                line = packetHelper_32[staticRegion.Value].ToString(epoch, message);
             }
 
             if (line != null)

@@ -7,12 +7,10 @@ using RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper;
 
 namespace RainbowMage.OverlayPlugin.NetworkProcessors
 {
-    using RPH = RegionalizedPacketHelper<
+    class LineBattleTalk2 : LineBaseCustom<
             Server_MessageHeader_Global, LineBattleTalk2.BattleTalk2_v655,
             Server_MessageHeader_CN, LineBattleTalk2.BattleTalk2_v655,
-            Server_MessageHeader_KR, LineBattleTalk2.BattleTalk2_v655>;
-
-    public class LineBattleTalk2
+            Server_MessageHeader_KR, LineBattleTalk2.BattleTalk2_v655>
     {
         [StructLayout(LayoutKind.Explicit, Size = structSize, Pack = 1)]
         internal unsafe struct BattleTalk2_v655 : IPacketStruct
@@ -63,65 +61,10 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
         }
 
         public const uint LogFileLineID = 267;
-
-        private readonly FFXIVRepository ffxiv;
-
-        private Func<string, DateTime, bool> logWriter;
-        private RPH packetHelper;
-        private GameRegion? currentRegion;
+        public const string logLineName = "BattleTalk2";
+        public const string MachinaPacketName = "BattleTalk2";
 
         public LineBattleTalk2(TinyIoCContainer container)
-        {
-            ffxiv = container.Resolve<FFXIVRepository>();
-            ffxiv.RegisterNetworkParser(MessageReceived);
-            ffxiv.RegisterProcessChangedHandler(ProcessChanged);
-
-            var opcodeConfig = container.Resolve<OverlayPluginLogLineConfig>();
-
-            packetHelper = RPH.CreateFromOpcodeConfig(opcodeConfig, "BattleTalk2");
-
-            if (packetHelper == null)
-            {
-                var logger = container.Resolve<ILogger>();
-                logger.Log(LogLevel.Error, "Failed to initialize LineBattleTalk2: Failed to create BattleTalk2 packet helper from opcode configs and native structs");
-                return;
-            }
-            var customLogLines = container.Resolve<FFXIVCustomLogLines>();
-            this.logWriter = customLogLines.RegisterCustomLogLine(new LogLineRegistryEntry()
-            {
-                Name = "BattleTalk2",
-                Source = "OverlayPlugin",
-                ID = LogFileLineID,
-                Version = 1,
-            });
-        }
-
-        private void ProcessChanged(Process process)
-        {
-            if (!ffxiv.IsFFXIVPluginPresent())
-                return;
-
-            currentRegion = null;
-        }
-
-        private unsafe void MessageReceived(string id, long epoch, byte[] message)
-        {
-            if (packetHelper == null)
-                return;
-
-            if (currentRegion == null)
-                currentRegion = ffxiv.GetMachinaRegion();
-
-            if (currentRegion == null)
-                return;
-
-            var line = packetHelper[currentRegion.Value].ToString(epoch, message);
-
-            if (line != null)
-            {
-                DateTime serverTime = ffxiv.EpochToDateTime(epoch);
-                logWriter(line, serverTime);
-            }
-        }
+            : base(container, LogFileLineID, logLineName, MachinaPacketName) { }
     }
 }

@@ -37,19 +37,13 @@ This is later cleared to a state of `00` via `ActorControl` `SetAnimationState`:
 
 namespace RainbowMage.OverlayPlugin.NetworkProcessors
 {
-    using RPH = RegionalizedPacketHelper<
-            Server_MessageHeader_Global, LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51,
+    class LineSpawnNpcExtra : LineBaseCustomMachina<Server_MessageHeader_Global, LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51,
             Server_MessageHeader_CN, LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51,
-            Server_MessageHeader_KR, LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51>;
-
-    public class LineSpawnNpcExtra
+            Server_MessageHeader_KR, LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51>
     {
         public const uint LogFileLineID = 272;
-        private readonly FFXIVRepository ffxiv;
-
-        private readonly Func<string, DateTime, bool> logWriter;
-        private RPH packetHelper;
-        private GameRegion? currentRegion;
+        public const string LogLineName = "NpcSpawnExtra";
+        public const string MachinaPacketName = "NpcSpawn";
 
         [StructLayout(LayoutKind.Explicit)]
         public unsafe struct Server_NpcSpawn_Global_6_51 : IPacketStruct
@@ -72,56 +66,6 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
         }
 
         public LineSpawnNpcExtra(TinyIoCContainer container)
-        {
-            ffxiv = container.Resolve<FFXIVRepository>();
-            ffxiv.RegisterNetworkParser(MessageReceived);
-            ffxiv.RegisterProcessChangedHandler(ProcessChanged);
-
-            packetHelper = RPH.CreateFromMachina("NpcSpawn");
-
-            if (packetHelper == null)
-            {
-                var logger = container.Resolve<ILogger>();
-                logger.Log(LogLevel.Error, "Failed to initialize LineSpawnNpcExtra: Failed to create NpcSpawn packet helper from Machina structs");
-                return;
-            }
-
-            var customLogLines = container.Resolve<FFXIVCustomLogLines>();
-            logWriter = customLogLines.RegisterCustomLogLine(new LogLineRegistryEntry()
-            {
-                Name = "NpcSpawnExtra",
-                Source = "OverlayPlugin",
-                ID = LogFileLineID,
-                Version = 1,
-            });
-        }
-
-        private void ProcessChanged(Process process)
-        {
-            if (!ffxiv.IsFFXIVPluginPresent())
-                return;
-
-            currentRegion = null;
-        }
-
-        private unsafe void MessageReceived(string id, long epoch, byte[] message)
-        {
-            if (packetHelper == null)
-                return;
-
-            if (currentRegion == null)
-                currentRegion = ffxiv.GetMachinaRegion();
-
-            if (currentRegion == null)
-                return;
-
-            var line = packetHelper[currentRegion.Value].ToString(epoch, message);
-
-            if (line != null)
-            {
-                DateTime serverTime = ffxiv.EpochToDateTime(epoch);
-                logWriter(line, serverTime);
-            }
-        }
+            : base(container, LogFileLineID, LogLineName, MachinaPacketName) { }
     }
 }

@@ -7,10 +7,11 @@ using RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper;
 
 namespace RainbowMage.OverlayPlugin.NetworkProcessors
 {
-    public class LineActorCastExtra
+    class LineActorCastExtra : LineBaseSubMachina<LineActorCastExtra.ActorCastExtraPacket>
     {
         public const uint LogFileLineID = 263;
-        private readonly FFXIVRepository ffxiv;
+        public const string LogLineName = "ActorCastExtra";
+        public const string MachinaPacketName = "ActorCast";
 
         internal class ActorCastExtraPacket : MachinaPacketWrapper
         {
@@ -35,62 +36,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
                     ActorID, abilityId, x, y, z, h);
             }
         }
-
-        private MachinaRegionalizedPacketHelper<ActorCastExtraPacket> packetHelper;
-        private GameRegion? currentRegion;
-
-        private readonly Func<string, DateTime, bool> logWriter;
-
         public LineActorCastExtra(TinyIoCContainer container)
-        {
-            ffxiv = container.Resolve<FFXIVRepository>();
-            ffxiv.RegisterNetworkParser(MessageReceived);
-            ffxiv.RegisterProcessChangedHandler(ProcessChanged);
-
-            if (MachinaRegionalizedPacketHelper<ActorCastExtraPacket>.Create("ActorCast", out packetHelper))
-            {
-                var customLogLines = container.Resolve<FFXIVCustomLogLines>();
-                logWriter = customLogLines.RegisterCustomLogLine(new LogLineRegistryEntry()
-                {
-                    Name = "ActorCastExtra",
-                    Source = "OverlayPlugin",
-                    ID = LogFileLineID,
-                    Version = 1,
-                });
-            }
-            else
-            {
-                var logger = container.Resolve<ILogger>();
-                logger.Log(LogLevel.Error, "Failed to initialize LineActorCastExtra: Failed to create ActorCast packet helper from Machina structs");
-            }
-        }
-
-        private void ProcessChanged(Process process)
-        {
-            if (!ffxiv.IsFFXIVPluginPresent())
-                return;
-
-            currentRegion = null;
-        }
-
-        private unsafe void MessageReceived(string id, long epoch, byte[] message)
-        {
-            if (packetHelper == null)
-                return;
-
-            if (currentRegion == null)
-                currentRegion = ffxiv.GetMachinaRegion();
-
-            if (currentRegion == null)
-                return;
-
-            var line = packetHelper[currentRegion.Value].ToString(epoch, message);
-
-            if (line != null)
-            {
-                DateTime serverTime = ffxiv.EpochToDateTime(epoch);
-                logWriter(line, serverTime);
-            }
-        }
+            : base(container, LogFileLineID, LogLineName, MachinaPacketName) { }
     }
 }

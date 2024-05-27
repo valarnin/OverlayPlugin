@@ -5,12 +5,10 @@ using RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper;
 
 namespace RainbowMage.OverlayPlugin.NetworkProcessors
 {
-    using RPH = RegionalizedPacketHelper<
+    class LineNpcYell : LineBaseCustom<
             Server_MessageHeader_Global, LineNpcYell.NpcYell_v655,
             Server_MessageHeader_CN, LineNpcYell.NpcYell_v655,
-            Server_MessageHeader_KR, LineNpcYell.NpcYell_v655>;
-
-    public class LineNpcYell
+            Server_MessageHeader_KR, LineNpcYell.NpcYell_v655>
     {
         [StructLayout(LayoutKind.Explicit, Size = structSize, Pack = 1)]
         internal unsafe struct NpcYell_v655 : IPacketStruct
@@ -40,66 +38,10 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
         }
 
         public const uint LogFileLineID = 266;
-
-        private readonly FFXIVRepository ffxiv;
-
-        private Func<string, DateTime, bool> logWriter;
-        private RPH packetHelper;
-        private GameRegion? currentRegion;
+        public const string logLineName = "NpcYell";
+        public const string MachinaPacketName = "NpcYell";
 
         public LineNpcYell(TinyIoCContainer container)
-        {
-            ffxiv = container.Resolve<FFXIVRepository>();
-            ffxiv.RegisterNetworkParser(MessageReceived);
-            ffxiv.RegisterProcessChangedHandler(ProcessChanged);
-
-            var opcodeConfig = container.Resolve<OverlayPluginLogLineConfig>();
-
-            packetHelper = RPH.CreateFromOpcodeConfig(opcodeConfig, "NpcYell");
-
-            if (packetHelper == null)
-            {
-                var logger = container.Resolve<ILogger>();
-                logger.Log(LogLevel.Error, "Failed to initialize LineNpcYell: Failed to create NpcYell packet helper from opcode configs and native structs");
-                return;
-            }
-
-            var customLogLines = container.Resolve<FFXIVCustomLogLines>();
-            this.logWriter = customLogLines.RegisterCustomLogLine(new LogLineRegistryEntry()
-            {
-                Name = "NpcYell",
-                Source = "OverlayPlugin",
-                ID = LogFileLineID,
-                Version = 1,
-            });
-        }
-
-        private void ProcessChanged(Process process)
-        {
-            if (!ffxiv.IsFFXIVPluginPresent())
-                return;
-
-            currentRegion = null;
-        }
-
-        private unsafe void MessageReceived(string id, long epoch, byte[] message)
-        {
-            if (packetHelper == null)
-                return;
-
-            if (currentRegion == null)
-                currentRegion = ffxiv.GetMachinaRegion();
-
-            if (currentRegion == null)
-                return;
-
-            var line = packetHelper[currentRegion.Value].ToString(epoch, message);
-
-            if (line != null)
-            {
-                DateTime serverTime = ffxiv.EpochToDateTime(epoch);
-                logWriter(line, serverTime);
-            }
-        }
+            : base(container, LogFileLineID, logLineName, MachinaPacketName) { }
     }
 }
