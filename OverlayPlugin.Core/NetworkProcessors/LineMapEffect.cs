@@ -6,9 +6,9 @@ using RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper;
 namespace RainbowMage.OverlayPlugin.NetworkProcessors
 {
     using RPH = RegionalizedPacketHelper<
-            Server_MessageHeader_Global, LineActorMove.ActorMove_v655,
-            Server_MessageHeader_CN, LineActorMove.ActorMove_v655,
-            Server_MessageHeader_KR, LineActorMove.ActorMove_v655>;
+            Server_MessageHeader_Global, LineMapEffect.MapEffect_v62,
+            Server_MessageHeader_CN, LineMapEffect.MapEffect_v62,
+            Server_MessageHeader_KR, LineMapEffect.MapEffect_v62>;
 
     public class LineMapEffect
     {
