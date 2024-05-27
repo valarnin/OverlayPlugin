@@ -82,7 +82,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             else
             {
                 var logger = container.Resolve<ILogger>();
-                logger.Log(LogLevel.Error, Resources.NetworkParserNoFfxiv);
+                logger.Log(LogLevel.Error, "Failed to initialize LineSpawnNpcExtra: Failed to create NpcSpawn packet helper from Machina structs");
             }
         }
 
@@ -91,13 +91,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             if (!ffxiv.IsFFXIVPluginPresent())
                 return;
 
-            try
-            {
-                currentRegion = null;
-            }
-            catch
-            {
-            }
+            currentRegion = null;
         }
 
         private unsafe void MessageReceived(string id, long epoch, byte[] message)

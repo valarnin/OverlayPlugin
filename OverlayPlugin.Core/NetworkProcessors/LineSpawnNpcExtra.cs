@@ -41,9 +41,6 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             Server_MessageHeader_Global, LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51,
             Server_MessageHeader_CN, LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51,
             Server_MessageHeader_KR, LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51>;
-    using Server_NpcSpawn_CN = LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51;
-    using Server_NpcSpawn_Global = LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51;
-    using Server_NpcSpawn_KR = LineSpawnNpcExtra.Server_NpcSpawn_Global_6_51;
 
     public class LineSpawnNpcExtra
     {
@@ -51,7 +48,6 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
         private readonly FFXIVRepository ffxiv;
 
         private readonly Func<string, DateTime, bool> logWriter;
-
         private RPH packetHelper;
         private GameRegion? currentRegion;
 
@@ -83,6 +79,13 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
 
             packetHelper = RPH.CreateFromMachina("NpcSpawn");
 
+            if (packetHelper == null)
+            {
+                var logger = container.Resolve<ILogger>();
+                logger.Log(LogLevel.Error, "Failed to initialize LineSpawnNpcExtra: Failed to create NpcSpawn packet helper from Machina structs");
+                return;
+            }
+
             var customLogLines = container.Resolve<FFXIVCustomLogLines>();
             logWriter = customLogLines.RegisterCustomLogLine(new LogLineRegistryEntry()
             {
@@ -98,13 +101,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             if (!ffxiv.IsFFXIVPluginPresent())
                 return;
 
-            try
-            {
-                currentRegion = null;
-            }
-            catch
-            {
-            }
+            currentRegion = null;
         }
 
         private unsafe void MessageReceived(string id, long epoch, byte[] message)
