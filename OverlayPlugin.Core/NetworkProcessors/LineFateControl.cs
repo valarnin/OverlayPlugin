@@ -1,185 +1,141 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
-using System.Runtime.InteropServices;
+using System.Diagnostics;
+using System.Linq;
+using RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper;
 
 namespace RainbowMage.OverlayPlugin.NetworkProcessors
 {
-    public enum FateCategory
-    {
-        Add,
-        Remove,
-        Update,
-    }
-
     public class LineFateControl
     {
-        private static readonly Dictionary<uint, FateCategory> FateCategories_v63 = new Dictionary<uint, FateCategory>
-        {
-            [0x942] = FateCategory.Add,
-            [0x935] = FateCategory.Remove,
-            [0x93C] = FateCategory.Update,
-        };
-        private static readonly Dictionary<FateCategory, string> FateCategoryStrings = new Dictionary<FateCategory, string>
-        {
-            [FateCategory.Add] = "Add",
-            [FateCategory.Remove] = "Remove",
-            [FateCategory.Update] = "Update",
+        public static readonly Server_ActorControlCategory[] FateActorControlCategories = {
+            Server_ActorControlCategory.FateAdd,
+            Server_ActorControlCategory.FateRemove,
+            Server_ActorControlCategory.FateUpdate,
         };
 
-        public const uint LogFileLineID = 258;
-        private ILogger logger;
-        private IOpcodeConfigEntry opcode = null;
-        private readonly int offsetMessageType;
-        private readonly int offsetPacketData;
-        private readonly FFXIVRepository ffxiv;
-        // fates<fateID, progress>
-        private static Dictionary<uint, uint> fates = new Dictionary<uint, uint>();
-        private readonly Dictionary<uint, FateCategory> fateCategories;
-
-        private Func<string, DateTime, bool> logWriter;
-
-        [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        public struct ActorControlSelf_v62
+        internal class ActorControlSelfExtraPacket : MachinaPacketWrapper
         {
-            public ushort category;
-            public ushort padding;
-            public uint fateID;
-            public uint progress;
-            public uint param3;
-            public uint param4;
-            public uint param5;
-            public uint param6;
-            public uint padding1;
-
-            public override string ToString()
+            public override string ToString(long epoch, uint ActorID)
             {
-                return $"{category:X4}|{padding:X4}|{fateID:X8}|{progress:X8}|{param3:X8}|{param4:X8}|{param5:X8}|{param6:X8}|{padding1:X8}";
-            }
-        }
+                var category = Get<Server_ActorControlCategory>("padding");
 
-        public LineFateControl(TinyIoCContainer container)
-        {
-            logger = container.Resolve<ILogger>();
-            ffxiv = container.Resolve<FFXIVRepository>();
-            var netHelper = container.Resolve<NetworkParser>();
-            if (!ffxiv.IsFFXIVPluginPresent())
-                return;
+                if (!FateActorControlCategories.Contains(category)) return null;
 
-            var repository = container.Resolve<FFXIVRepository>();
-            var region = repository.GetMachinaRegion();
-            fateCategories = FateCategories_v63;
+                var padding = Get<UInt16>("padding");
+                var fateID = Get<UInt32>("param1");
+                var progress = Get<UInt32>("param2");
+                var param3 = Get<UInt32>("param3");
+                var param4 = Get<UInt32>("param4");
+                var param5 = Get<UInt32>("param5");
+                var param6 = Get<UInt32>("param6");
+                var padding1 = Get<UInt32>("padding1");
 
-            var customLogLines = container.Resolve<FFXIVCustomLogLines>();
-            this.logWriter = customLogLines.RegisterCustomLogLine(new LogLineRegistryEntry()
-            {
-                Name = "FateDirector",
-                Source = "OverlayPlugin",
-                ID = LogFileLineID,
-                Version = 1,
-            });
-            try
-            {
-                var mach = Assembly.Load("Machina.FFXIV");
-                var msgHeaderType = mach.GetType("Machina.FFXIV.Headers.Server_MessageHeader");
-                offsetMessageType = netHelper.GetOffset(msgHeaderType, "MessageType");
-                offsetPacketData = Marshal.SizeOf(msgHeaderType);
-                var packetType = mach.GetType("Machina.FFXIV.Headers.Server_ActorControlSelf");
-                opcode = new OpcodeConfigEntry()
-                {
-                    opcode = netHelper.GetOpcode("ActorControlSelf"),
-                    size = (uint)Marshal.SizeOf(typeof(ActorControlSelf_v62)),
-                };
-                ffxiv.RegisterNetworkParser(MessageReceived);
-            }
-            catch (System.IO.FileNotFoundException)
-            {
-                logger.Log(LogLevel.Error, Resources.NetworkParserNoFfxiv);
-            }
-            catch (Exception e)
-            {
-                logger.Log(LogLevel.Error, Resources.NetworkParserInitException, e);
-            }
-
-            ffxiv.RegisterZoneChangeDelegate((zoneID, zoneName) => fates.Clear());
-        }
-
-        private unsafe void MessageReceived(string id, long epoch, byte[] message)
-        {
-            if (opcode == null)
-            {
-                return;
-            }
-
-            if (message.Length < opcode.size + offsetPacketData)
-            {
-                return;
-            }
-
-            fixed (byte* buffer = message)
-            {
-                if (*(ushort*)&buffer[offsetMessageType] != opcode.opcode)
-                {
-                    return;
-                }
-
-                ActorControlSelf_v62 mapEffectPacket = *(ActorControlSelf_v62*)&buffer[offsetPacketData];
-                FateCategory categoryEnum;
-                if (!fateCategories.TryGetValue(mapEffectPacket.category, out categoryEnum))
-                {
-                    return;
-                }
-
-                var categoryStr = "Error";
-                FateCategoryStrings.TryGetValue(categoryEnum, out categoryStr);
-                var category = mapEffectPacket.category;
-                var fateID = mapEffectPacket.fateID;
-                var progress = mapEffectPacket.progress;
+                var categoryStr = category.ToString().Replace("Fate", "");
 
                 // Do some basic filtering on fate data to avoid spamming the log needlessly.
-                if (categoryEnum == FateCategory.Add)
+                if (category == Server_ActorControlCategory.FateAdd)
                 {
                     if (fates.ContainsKey(fateID))
                     {
-                        return;
+                        return null;
                     }
                     fates.Add(fateID, 0);
                 }
-                else if (categoryEnum == FateCategory.Remove)
+                else if (category == Server_ActorControlCategory.FateRemove)
                 {
                     if (!fates.Remove(fateID))
                     {
-                        return;
+                        return null;
                     }
                 }
-                else if (categoryEnum == FateCategory.Update)
+                else if (category == Server_ActorControlCategory.FateUpdate)
                 {
-                    uint oldProgress;
-                    if (fates.TryGetValue(fateID, out oldProgress))
+                    if (fates.TryGetValue(fateID, out var oldProgress))
                     {
                         if (progress == oldProgress)
                         {
-                            return;
+                            return null;
                         }
                     }
                     fates[fateID] = progress;
                 }
 
-                DateTime serverTime = ffxiv.EpochToDateTime(epoch);
-                logWriter(
-                    $"{categoryStr}|" +
-                    $"{mapEffectPacket.padding:X4}|" +
-                    $"{mapEffectPacket.fateID:X8}|" +
-                    $"{mapEffectPacket.progress:X8}|" +
-                    $"{mapEffectPacket.param3:X8}|" +
-                    $"{mapEffectPacket.param4:X8}|" +
-                    $"{mapEffectPacket.param5:X8}|" +
-                    $"{mapEffectPacket.param6:X8}|" +
-                    $"{mapEffectPacket.padding1:X8}",
-                    serverTime
-                );
+                return $"{categoryStr}|" +
+                    $"{padding:X4}|" +
+                    $"{fateID:X8}|" +
+                    $"{progress:X8}|" +
+                    $"{param3:X8}|" +
+                    $"{param4:X8}|" +
+                    $"{param5:X8}|" +
+                    $"{param6:X8}|" +
+                    $"{padding1:X8}";
             }
         }
 
+        public const uint LogFileLineID = 258;
+
+        private readonly FFXIVRepository ffxiv;
+
+        private static Dictionary<uint, uint> fates = new Dictionary<uint, uint>();
+
+        private MachinaRegionalizedPacketHelper<ActorControlSelfExtraPacket> packetHelper;
+        private GameRegion? currentRegion;
+
+        private Func<string, DateTime, bool> logWriter;
+
+        public LineFateControl(TinyIoCContainer container)
+        {
+            ffxiv = container.Resolve<FFXIVRepository>();
+            ffxiv.RegisterNetworkParser(MessageReceived);
+            ffxiv.RegisterProcessChangedHandler(ProcessChanged);
+
+            if (MachinaRegionalizedPacketHelper<ActorControlSelfExtraPacket>.Create("ActorControlSelf", out packetHelper))
+            {
+                var customLogLines = container.Resolve<FFXIVCustomLogLines>();
+                this.logWriter = customLogLines.RegisterCustomLogLine(new LogLineRegistryEntry()
+                {
+                    Name = "FateDirector",
+                    Source = "OverlayPlugin",
+                    ID = LogFileLineID,
+                    Version = 1,
+                });
+
+                ffxiv.RegisterZoneChangeDelegate((zoneID, zoneName) => fates.Clear());
+            }
+            else
+            {
+                var logger = container.Resolve<ILogger>();
+                logger.Log(LogLevel.Error, "Failed to initialize LineFateControl: Failed to create ActorControlSelf packet helper from Machina structs");
+            }
+        }
+
+        private void ProcessChanged(Process process)
+        {
+            if (!ffxiv.IsFFXIVPluginPresent())
+                return;
+
+            currentRegion = null;
+        }
+
+        private unsafe void MessageReceived(string id, long epoch, byte[] message)
+        {
+            if (packetHelper == null)
+                return;
+
+            if (currentRegion == null)
+                currentRegion = ffxiv.GetMachinaRegion();
+
+            if (currentRegion == null)
+                return;
+
+            var line = packetHelper[currentRegion.Value].ToString(epoch, message);
+
+            if (line != null)
+            {
+                DateTime serverTime = ffxiv.EpochToDateTime(epoch);
+                logWriter(line, serverTime);
+            }
+        }
     }
 }
