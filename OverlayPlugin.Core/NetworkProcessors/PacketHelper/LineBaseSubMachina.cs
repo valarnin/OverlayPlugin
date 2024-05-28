@@ -9,7 +9,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
         protected static FFXIVRepository ffxiv;
 
         protected readonly Func<string, DateTime, bool> logWriter;
-        protected readonly MachinaRegionalizedPacketHelper<PacketType> packetHelper;
+        protected MachinaRegionalizedPacketHelper<PacketType> packetHelper;
         protected GameRegion? currentRegion;
 
         public LineBaseSubMachina(TinyIoCContainer container, uint logFileLineID, string logLineName, string machinaPacketName)

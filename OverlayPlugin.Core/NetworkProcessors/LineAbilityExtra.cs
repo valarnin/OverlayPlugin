@@ -20,35 +20,48 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
         {
             public unsafe override string ToString(long epoch, uint ActorID)
             {
-                var packetPtr = Marshal.AllocHGlobal(Marshal.SizeOf(packetValue));
-                T rawPacket = *(T*)packetPtr.ToPointer();
-
-                MachinaPacketHelper<AbilityExtraPacket<Server_ActionEffect1_Extra>> packetHelper = (MachinaPacketHelper<AbilityExtraPacket<Server_ActionEffect1_Extra>>)aeHelper[staticRegion.Value];
-
-                packetHelper.ToStructs(packetPtr, out var _, out var aeHeader);
-
-                // Ability ID is really 16-bit, so it is formatted as such, but we will get an
-                // exception if we try to prematurely cast it to UInt16
-                var abilityId = aeHeader.Get<uint>("actionId");
-                var globalEffectCounter = aeHeader.Get<uint>("globalEffectCounter");
-
-                if (rawPacket.actionEffectCount == 1)
+                IntPtr packetPtr = IntPtr.Zero;
+                try
                 {
-                    // AE1 is not useful. It does not contain this data. But we still need to write something
-                    // to indicate that a proper line will not be happening.
+                    MachinaPacketHelper<AbilityExtraPacket<Server_ActionEffect1_Extra>> packetHelper = (MachinaPacketHelper<AbilityExtraPacket<Server_ActionEffect1_Extra>>)aeHelper[staticRegion.Value];
+
+                    packetPtr = Marshal.AllocHGlobal(Marshal.SizeOf(packetValue));
+                    Marshal.StructureToPtr(packetValue, packetPtr, true);
+
+                    T rawPacket = *(T*)(packetPtr + packetHelper.headerSize).ToPointer();
+
+                    packetHelper.ToStructs(packetPtr, out var _, out var aeHeader, true);
+
+                    // Ability ID is really 16-bit, so it is formatted as such, but we will get an
+                    // exception if we try to prematurely cast it to UInt16
+                    var abilityId = aeHeader.Get<uint>("actionId");
+                    var globalEffectCounter = aeHeader.Get<uint>("globalEffectCounter");
+
+                    if (rawPacket.actionEffectCount == 1)
+                    {
+                        // AE1 is not useful. It does not contain this data. But we still need to write something
+                        // to indicate that a proper line will not be happening.
+                        return string.Format(CultureInfo.InvariantCulture,
+                            "{0:X8}|{1:X4}|{2:X8}|{3}||||",
+                            ActorID, abilityId, globalEffectCounter, (int)LineSubType.NO_DATA);
+                    }
+
+                    float x = FFXIVRepository.ConvertUInt16Coordinate(rawPacket.x);
+                    float y = FFXIVRepository.ConvertUInt16Coordinate(rawPacket.y);
+                    float z = FFXIVRepository.ConvertUInt16Coordinate(rawPacket.z);
+
+                    var h = FFXIVRepository.ConvertHeading(aeHeader.Get<ushort>("rotation"));
                     return string.Format(CultureInfo.InvariantCulture,
-                        "{0:X8}|{1:X4}|{2:X8}|{3}||||",
-                        ActorID, abilityId, globalEffectCounter, (int)LineSubType.NO_DATA);
+                        "{0:X8}|{1:X4}|{2:X8}|{3}|{4:F3}|{5:F3}|{6:F3}|{7:F3}",
+                        ActorID, abilityId, globalEffectCounter, (int)LineSubType.DATA_PRESENT, x, y, z, h);
                 }
-
-                float x = FFXIVRepository.ConvertUInt16Coordinate(rawPacket.x);
-                float y = FFXIVRepository.ConvertUInt16Coordinate(rawPacket.y);
-                float z = FFXIVRepository.ConvertUInt16Coordinate(rawPacket.z);
-
-                var h = FFXIVRepository.ConvertHeading(aeHeader.Get<ushort>("rotation"));
-                return string.Format(CultureInfo.InvariantCulture,
-                    "{0:X8}|{1:X4}|{2:X8}|{3}|{4:F3}|{5:F3}|{6:F3}|{7:F3}",
-                    ActorID, abilityId, globalEffectCounter, (int)LineSubType.DATA_PRESENT, x, y, z, h);
+                finally
+                {
+                    if (packetPtr != IntPtr.Zero)
+                    {
+                        Marshal.FreeHGlobal(packetPtr);
+                    }
+                }
             }
         }
 
@@ -167,29 +180,39 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
 
         public LineAbilityExtra(TinyIoCContainer container) : base(container, LogFileLineID, LogLineName, MachinaPacketName)
         {
-            aeHelper = packetHelper;
-
             var logger = container.Resolve<ILogger>();
 
-            if (!MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect8_Extra>>.Create("ActionEffect8", out packetHelper_8))
+            if (!MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect1_Extra>>.Create(MachinaPacketName, out packetHelper, "Ability1"))
+            {
+                logger.Log(LogLevel.Error, $"Failed to initialize LineAbilityExtra: Creating {MachinaPacketName} failed");
+                return;
+            }
+
+            if (!MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect1_Extra>>.Create("ActionEffectHeader", out aeHelper, "Ability1"))
+            {
+                logger.Log(LogLevel.Error, "Failed to initialize LineAbilityExtra: Creating ActionEffectHeader failed");
+                return;
+            }
+
+            if (!MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect8_Extra>>.Create("ActionEffect8", out packetHelper_8, "Ability8"))
             {
                 logger.Log(LogLevel.Error, "Failed to initialize LineAbilityExtra: Creating ActionEffect8 failed");
                 return;
             }
 
-            if (!MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect16_Extra>>.Create("ActionEffect16", out packetHelper_16))
+            if (!MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect16_Extra>>.Create("ActionEffect16", out packetHelper_16, "Ability16"))
             {
                 logger.Log(LogLevel.Error, "Failed to initialize LineAbilityExtra: Creating ActionEffect16 failed");
                 return;
             }
 
-            if (!MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect24_Extra>>.Create("ActionEffect24", out packetHelper_24))
+            if (!MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect24_Extra>>.Create("ActionEffect24", out packetHelper_24, "Ability24"))
             {
                 logger.Log(LogLevel.Error, "Failed to initialize LineAbilityExtra: Creating ActionEffect24 failed");
                 return;
             }
 
-            if (!MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect32_Extra>>.Create("ActionEffect32", out packetHelper_32))
+            if (!MachinaRegionalizedPacketHelper<AbilityExtraPacket<Server_ActionEffect32_Extra>>.Create("ActionEffect32", out packetHelper_32, "Ability32"))
             {
                 logger.Log(LogLevel.Error, "Failed to initialize LineAbilityExtra: Creating ActionEffect32 failed");
                 return;

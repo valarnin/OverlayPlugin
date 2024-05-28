@@ -103,8 +103,9 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
             this.kr = kr;
         }
 
-        public static bool Create(string packetTypeName, out MachinaRegionalizedPacketHelper<PacketType> packetHelper)
+        public static bool Create(string packetTypeName, out MachinaRegionalizedPacketHelper<PacketType> packetHelper, string packetOpcodeName = null)
         {
+            packetOpcodeName = packetOpcodeName ?? packetTypeName;
             packetHelper = null;
             var opcodes = FFXIVRepository.GetMachinaOpcodes();
             if (opcodes == null)
@@ -138,15 +139,15 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
                 return false;
             }
 
-            if (!globalOpcodes.TryGetValue(packetTypeName, out var globalOpcode))
+            if (!globalOpcodes.TryGetValue(packetOpcodeName, out var globalOpcode))
             {
                 globalOpcode = 0;
             }
-            if (!cnOpcodes.TryGetValue(packetTypeName, out var cnOpcode))
+            if (!cnOpcodes.TryGetValue(packetOpcodeName, out var cnOpcode))
             {
                 cnOpcode = 0;
             }
-            if (!krOpcodes.TryGetValue(packetTypeName, out var krOpcode))
+            if (!krOpcodes.TryGetValue(packetOpcodeName, out var krOpcode))
             {
                 krOpcode = 0;
             }
@@ -190,7 +191,8 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
         {
             Opcode = opcode;
             headerSize = Marshal.SizeOf(headerType);
-            packetSize = Marshal.SizeOf(packetType);
+            // Machina packets include the header as part of the packet struct
+            packetSize = Marshal.SizeOf(packetType) - headerSize;
             this.headerType = headerType;
             this.packetType = packetType;
         }
@@ -245,13 +247,13 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
             return ToStructs(ptr, out header, out packet);
         }
 
-        public unsafe bool ToStructs(IntPtr ptr, out MachinaHeaderWrapper header, out PacketType packet)
+        public unsafe bool ToStructs(IntPtr ptr, out MachinaHeaderWrapper header, out PacketType packet, bool ignoreOpcode = false)
         {
             var headerObj = Marshal.PtrToStructure(ptr, headerType);
 
             header = new MachinaHeaderWrapper(headerObj);
 
-            if (header.Opcode != Opcode)
+            if (!ignoreOpcode && header.Opcode != Opcode)
             {
                 header = null;
                 packet = null;
