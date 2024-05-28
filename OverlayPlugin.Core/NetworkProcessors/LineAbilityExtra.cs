@@ -28,7 +28,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
                     packetPtr = Marshal.AllocHGlobal(Marshal.SizeOf(packetValue));
                     Marshal.StructureToPtr(packetValue, packetPtr, true);
 
-                    T rawPacket = *(T*)(packetPtr + packetHelper.headerSize).ToPointer();
+                    T rawPacket = *(T*)packetPtr.ToPointer();
 
                     packetHelper.ToStructs(packetPtr, out var _, out var aeHeader, true);
 
