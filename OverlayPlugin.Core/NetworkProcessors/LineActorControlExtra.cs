@@ -36,9 +36,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
                 var param3 = Get<UInt32>("param3");
                 var param4 = Get<UInt32>("param4");
 
-                return string.Format(CultureInfo.InvariantCulture,
-                            "{0:X8}|{1:X4}|{2:X}|{3:X}|{4:X}|{5:X}",
-                            ActorID, (ushort)category, param1, param2, param3, param4);
+                return $"{ActorID:X8}|{(ushort)category:X4}|{param1:X}|{param2:X}|{param3:X}|{param4:X}";
             }
         }
         public LineActorControlExtra(TinyIoCContainer container)
