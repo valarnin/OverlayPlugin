@@ -45,13 +45,13 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
         [StructLayout(LayoutKind.Explicit)]
         public unsafe struct Server_NpcSpawn_Global_6_51 : IPacketStruct
         {
-            [FieldOffset(0x78)]
+            [FieldOffset(0x58)]
             public uint parentActorId;
 
-            [FieldOffset(0x9A)]
+            [FieldOffset(0x7A)]
             public ushort tetherId;
 
-            [FieldOffset(0xB3)]
+            [FieldOffset(0x93)]
             public byte animationState;
 
             public string ToString(long epoch, uint ActorID)
