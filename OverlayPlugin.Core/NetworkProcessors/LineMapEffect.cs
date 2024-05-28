@@ -8,19 +8,15 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             Server_MessageHeader_CN, LineMapEffect.MapEffect_v62,
             Server_MessageHeader_KR, LineMapEffect.MapEffect_v62>
     {
-        [StructLayout(LayoutKind.Explicit)]
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
         internal struct MapEffect_v62 : IPacketStruct
         {
-            [FieldOffset(0x0)]
             public uint instanceContentID;
-            [FieldOffset(0x4)]
             public uint flags;
-            [FieldOffset(0x8)]
             public byte index;
-            [FieldOffset(0x9)]
             public byte unknown1;
-            [FieldOffset(0x10)]
             public ushort unknown2;
+            public uint padding;
 
             public string ToString(long epoch, uint ActorID)
             {
