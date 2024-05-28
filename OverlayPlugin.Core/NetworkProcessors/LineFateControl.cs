@@ -17,7 +17,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
         {
             public override string ToString(long epoch, uint ActorID)
             {
-                var category = Get<Server_ActorControlCategory>("padding");
+                var category = Get<Server_ActorControlCategory>("category");
 
                 if (!FateActorControlCategories.Contains(category)) return null;
 
