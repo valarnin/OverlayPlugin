@@ -15,18 +15,16 @@ namespace RainbowMage.OverlayPlugin.Updater
     {
         private string _cefPath;
         private object _pluginLoader;
-        private TinyIoCContainer _container;
 
-        public CefMissingTab(string cefPath, object pluginLoader, TinyIoCContainer container)
+        public CefMissingTab(string cefPath, object pluginLoader)
         {
             InitializeComponent();
 
-            _container = container;
             _cefPath = cefPath;
             _pluginLoader = pluginLoader;
             lnkManual.Text = CefInstaller.GetUrl();
 
-            container.Resolve<ILogger>().RegisterListener((entry) =>
+            TinyIoCContainer.Current.Resolve<ILogger>().RegisterListener((entry) =>
             {
                 logBox.AppendText($"[{entry.Time}] {entry.Level}: {entry.Message}" + Environment.NewLine);
             });
@@ -44,7 +42,7 @@ namespace RainbowMage.OverlayPlugin.Updater
             if (await CefInstaller.InstallCef(_cefPath, dialog.FileName))
             {
                 Parent.Controls.Remove(this);
-                _pluginLoader.GetType().GetMethod("FinishInit").Invoke(_pluginLoader, new object[] { _container });
+                _pluginLoader.GetType().GetMethod("FinishInit").Invoke(_pluginLoader, new object[] { });
             }
         }
 
@@ -53,7 +51,7 @@ namespace RainbowMage.OverlayPlugin.Updater
             if (await CefInstaller.EnsureCef(_cefPath))
             {
                 Parent.Controls.Remove(this);
-                _pluginLoader.GetType().GetMethod("FinishInit").Invoke(_pluginLoader, new object[] { _container });
+                _pluginLoader.GetType().GetMethod("FinishInit").Invoke(_pluginLoader, new object[] { });
             }
         }
 

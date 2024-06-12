@@ -6,7 +6,7 @@ namespace RainbowMage.OverlayPlugin
     /// <summary>
     /// ログを記録する機能を提供するクラス。
     /// </summary>
-    public class Logger : ILogger
+    public class Logger : ILogger, ITinyIoCAutoConstructPreInit<ILogger>, ITinyIoCAutoConstructPreInit<Logger>
     {
         /// <summary>
         /// 記録されたログを取得します。

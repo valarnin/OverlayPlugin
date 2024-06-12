@@ -70,7 +70,7 @@ namespace RainbowMage.OverlayPlugin
                 Thread.Sleep(500);
 
                 if (lastClick != now) return;
-                Updater.Updater.PerformUpdateIfNecessary(pluginDirectory, container, true, timePassed < 500);
+                Updater.Updater.PerformUpdateIfNecessary(pluginDirectory, true, timePassed < 500);
             });
         }
 

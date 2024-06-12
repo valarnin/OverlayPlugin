@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -11,18 +10,6 @@ using Newtonsoft.Json;
 using RainbowMage.HtmlRenderer;
 using RainbowMage.OverlayPlugin.Controls;
 using RainbowMage.OverlayPlugin.EventSources;
-using RainbowMage.OverlayPlugin.MemoryProcessors;
-using RainbowMage.OverlayPlugin.MemoryProcessors.Aggro;
-using RainbowMage.OverlayPlugin.MemoryProcessors.AtkStage;
-using RainbowMage.OverlayPlugin.MemoryProcessors.Combatant;
-using RainbowMage.OverlayPlugin.MemoryProcessors.ContentFinderSettings;
-using RainbowMage.OverlayPlugin.MemoryProcessors.Enmity;
-using RainbowMage.OverlayPlugin.MemoryProcessors.EnmityHud;
-using RainbowMage.OverlayPlugin.MemoryProcessors.InCombat;
-using RainbowMage.OverlayPlugin.MemoryProcessors.JobGauge;
-using RainbowMage.OverlayPlugin.MemoryProcessors.Party;
-using RainbowMage.OverlayPlugin.MemoryProcessors.Target;
-using RainbowMage.OverlayPlugin.NetworkProcessors;
 using RainbowMage.OverlayPlugin.Overlays;
 
 namespace RainbowMage.OverlayPlugin
@@ -49,11 +36,11 @@ namespace RainbowMage.OverlayPlugin
 
         internal string PluginDirectory { get; private set; }
 
-        public PluginMain(string pluginDirectory, Logger logger, TinyIoCContainer container)
+        public PluginMain(string pluginDirectory)
         {
-            _container = container;
+            _container = TinyIoCContainer.Current;
             PluginDirectory = pluginDirectory;
-            _logger = logger;
+            _logger = _container.Resolve<ILogger>();
 
             configSaveTimer = new Timer();
             configSaveTimer.Interval = 300000; // 5 minutes
@@ -67,13 +54,13 @@ namespace RainbowMage.OverlayPlugin
         /// </summary>
         /// <param name="pluginScreenSpace"></param>
         /// <param name="pluginStatusText"></param>
-        public void InitPlugin(TabPage pluginScreenSpace, Label pluginStatusText)
+        public async Task InitPlugin(TabPage pluginScreenSpace, Label pluginStatusText)
         {
             try
             {
                 this.tabPage = pluginScreenSpace;
                 this.label = pluginStatusText;
-                this.label.Text = "Init Phase 1: Infrastructure";
+                await SetPluginStatusText("Init Phase 1: Infrastructure");
 
 #if DEBUG
                 _logger.Log(LogLevel.Warning, "##################################");
@@ -94,13 +81,7 @@ namespace RainbowMage.OverlayPlugin
                 // 1.a Stuff without state
                 FFXIVExportVariables.Init();
 
-                // 1.b Stuff with state
-                _container.Register(new NativeMethods(_container));
-                _container.Register(new EventDispatcher(_container));
-                _container.Register(new Registry(_container));
-                _container.Register(new KeyboardHook(_container));
-
-                this.label.Text = "Init Phase 1: Config";
+                await SetPluginStatusText("Init Phase 1: Config");
                 if (!LoadConfig())
                 {
                     _logger.Log(LogLevel.Error, "Failed to load the plugin config. Please report this error on the GitHub repo or on the ACT Discord.");
@@ -112,15 +93,15 @@ namespace RainbowMage.OverlayPlugin
                     return;
                 }
 
-                this.label.Text = "Init Phase 1: WSServer";
-                _container.Register(new WSServer(_container));
+                TinyIoCAutoHelper.AutoRegisterBeforeInit();
+                TinyIoCAutoHelper.AutoConstructBeforeInit();
 
 #if TRACEPERF
                 _logger.Log(LogLevel.Debug, "Component init and config load took {0}s.", watch.Elapsed.TotalSeconds);
                 watch.Reset();
 #endif
 
-                this.label.Text = "Init Phase 1: CEF";
+                await SetPluginStatusText("Init Phase 1: CEF");
                 try
                 {
                     Renderer.Initialize(PluginDirectory, ActGlobals.oFormActMain.AppDataFolder.FullName, Config.ErrorReports);
@@ -135,7 +116,7 @@ namespace RainbowMage.OverlayPlugin
                 watch.Reset();
 #endif
 
-                this.label.Text = "Init Phase 1: Legacy message bus";
+                await SetPluginStatusText("Init Phase 1: Legacy message bus");
                 // プラグイン間のメッセージ関連
                 OverlayApi.BroadcastMessage += (o, e) =>
                 {
@@ -174,15 +155,15 @@ namespace RainbowMage.OverlayPlugin
                 watch.Reset();
 #endif
 
-                this.label.Text = "Init Phase 1: UI";
+                await SetPluginStatusText("Init Phase 1: UI");
 
                 // Setup the UI
-                this.controlPanel = new ControlPanel(_container);
+                this.controlPanel = new ControlPanel();
                 this.controlPanel.Dock = DockStyle.Fill;
                 this.tabPage.Controls.Add(this.controlPanel);
                 this.tabPage.Name = "OverlayPlugin";
 
-                this.wsConfigPanel = new WSConfigPanel(_container);
+                this.wsConfigPanel = new WSConfigPanel();
                 this.wsConfigPanel.Dock = DockStyle.Fill;
 
                 this.wsTabPage = new TabPage("OverlayPlugin WSServer");
@@ -194,10 +175,10 @@ namespace RainbowMage.OverlayPlugin
                 // Fire off the update check (which runs in the background)
                 if (Config.UpdateCheck)
                 {
-                    Updater.Updater.PerformUpdateIfNecessary(PluginDirectory, _container);
+                    Updater.Updater.PerformUpdateIfNecessary(PluginDirectory);
                 }
 
-                this.label.Text = "Init Phase 1: Presets";
+                await SetPluginStatusText("Init Phase 1: Presets");
                 // Load our presets
                 try
                 {
@@ -232,7 +213,7 @@ namespace RainbowMage.OverlayPlugin
                     _logger.Log(LogLevel.Error, string.Format("Failed to load presets: {0}", ex));
                 }
 
-                this.label.Text = "Init Phase 1: Waiting for plugins to load";
+                await SetPluginStatusText("Init Phase 1: Waiting for plugins to load");
                 initTimer = new Timer();
                 initTimer.Interval = 300;
                 initTimer.Tick += async (o, e) =>
@@ -249,37 +230,13 @@ namespace RainbowMage.OverlayPlugin
                             initTimer.Stop();
 
                             // ** Init phase 2
-                            this.label.Text = "Init Phase 2: Integrations";
+                            await SetPluginStatusText("Init Phase 2: Integrations");
 
                             // Wrap FFXIV plugin related initialization in try/catch to allow OP to work when FFXIV plugin isn't present
                             try
                             {
-                                // Initialize the parser in the second phase since it needs the FFXIV plugin.
-                                // If OverlayPlugin is placed above the FFXIV plugin, it won't be available in the first
-                                // phase but it'll be loaded by the time we enter the second phase.
-                                _container.Register(new FFXIVRepository(_container));
-                                _container.Register(new NetworkParser(_container));
-                                _container.Register(new TriggIntegration(_container));
-                                _container.Register(new FFXIVCustomLogLines(_container));
-                                _container.Register(new MemoryProcessors.FFXIVClientStructs.Data(_container));
-
-                                // Register FFXIV memory reading subcomponents.
-                                // Must be done before loading addons.
-                                _container.Register(new FFXIVMemory(_container));
-
-                                // These are registered to be lazy-loaded. Use interface to force TinyIoC to use singleton pattern.
-                                _container.Register<ICombatantMemory, CombatantMemoryManager>();
-                                _container.Register<ITargetMemory, TargetMemoryManager>();
-                                _container.Register<IContentFinderSettingsMemory, ContentFinderSettingsMemoryManager>();
-                                _container.Register<IAggroMemory, AggroMemoryManager>();
-                                _container.Register<IEnmityMemory, EnmityMemoryManager>();
-                                _container.Register<IEnmityHudMemory, EnmityHudMemoryManager>();
-                                _container.Register<IInCombatMemory, InCombatMemoryManager>();
-                                _container.Register<IAtkStageMemory, AtkStageMemoryManager>();
-                                _container.Register<IPartyMemory, PartyMemoryManager>();
-                                _container.Register<IJobGaugeMemory, JobGaugeMemoryManager>();
-
-                                _container.Register(new OverlayPluginLogLines(_container));
+                                TinyIoCAutoHelper.AutoRegisterDuringInit();
+                                TinyIoCAutoHelper.AutoConstructDuringInit();
                             }
                             catch (Exception ex)
                             {
@@ -292,12 +249,12 @@ namespace RainbowMage.OverlayPlugin
                             // addons. Plugins below OverlayPlugin wouldn't have been loaded in the first init phase.
                             // However, in the second phase all plugins have been loaded which means we can look for addons
                             // in that list.
-                            this.label.Text = "Init Phase 2: Addons";
+                            await SetPluginStatusText("Init Phase 2: Addons");
                             await Task.Run(LoadAddons);
                             wsConfigPanel.RebuildOverlayOptions();
 
-                            this.label.Text = "Init Phase 2: UI";
-                            ActGlobals.oFormActMain.Invoke((Action)(() =>
+                            await SetPluginStatusText("Init Phase 2: UI");
+                            await InvokeOnUIThread(() =>
                             {
                                 try
                                 {
@@ -308,8 +265,8 @@ namespace RainbowMage.OverlayPlugin
                                     controlPanel.InitializeOverlayConfigTabs();
 
                                     this.label.Text = "Init Phase 2: Overlay tasks";
-                                    _container.Register(new OverlayHider(_container));
-                                    _container.Register(new OverlayZCorrector(_container));
+                                    TinyIoCAutoHelper.AutoRegisterAfterInit();
+                                    TinyIoCAutoHelper.AutoConstructAfterInit();
 
                                     // WSServer has to start after the LoadAddons() call because clients can connect immediately
                                     // after it's initialized and that requires the event sources to be initialized.
@@ -330,7 +287,7 @@ namespace RainbowMage.OverlayPlugin
                                 {
                                     _logger.Log(LogLevel.Error, "InitPlugin: {0}", ex);
                                 }
-                            }));
+                            });
                         }
                         catch (Exception ex)
                         {
@@ -460,7 +417,7 @@ namespace RainbowMage.OverlayPlugin
             }
 
             _logger.Log(LogLevel.Info, "DeInitPlugin: Finalized.");
-            if (this.label != null) this.label.Text = "Finalized.";
+            _ = SetPluginStatusText("Finalized.");
         }
 
         private void LoadAddons()
@@ -609,6 +566,44 @@ namespace RainbowMage.OverlayPlugin
         {
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
+        }
+
+        public async Task SetPluginStatusText(string text)
+        {
+            await InvokeOnUIThread(() =>
+            {
+                if (label != null) label.Text = text;
+            });
+        }
+
+        public static Task<T> InvokeOnUIThread<T>(Func<T> p)
+        {
+            return Task.Run(new Func<T>(() =>
+            {
+                if (ActGlobals.oFormActMain.InvokeRequired)
+                {
+                    return (T)ActGlobals.oFormActMain.EndInvoke(ActGlobals.oFormActMain.BeginInvoke(p));
+                }
+                else
+                {
+                    return p();
+                }
+            }));
+        }
+
+        public static Task InvokeOnUIThread(Action p)
+        {
+            return Task.Run(() =>
+            {
+                if (ActGlobals.oFormActMain.InvokeRequired)
+                {
+                    ActGlobals.oFormActMain.EndInvoke(ActGlobals.oFormActMain.BeginInvoke(p));
+                }
+                else
+                {
+                    p();
+                }
+            });
         }
     }
 }

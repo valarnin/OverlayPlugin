@@ -39,7 +39,7 @@ namespace RainbowMage.OverlayPlugin
             { "SpellTimerOverlay", Resources.MapOverlaySpellTimer },
         };
 
-        public ControlPanel(TinyIoCContainer container)
+        public ControlPanel()
         {
             InitializeComponent();
             tableLayoutPanel0.PerformLayout();
@@ -47,11 +47,11 @@ namespace RainbowMage.OverlayPlugin
             // important if we never make it that far.
             splitContainer1.SplitterDistance = 5;
 
-            _container = container;
-            _logger = container.Resolve<ILogger>();
-            _pluginMain = container.Resolve<PluginMain>();
-            _config = container.Resolve<IPluginConfig>();
-            _registry = container.Resolve<Registry>();
+            _container = TinyIoCContainer.Current;
+            _logger = _container.Resolve<ILogger>();
+            _pluginMain = _container.Resolve<PluginMain>();
+            _config = _container.Resolve<IPluginConfig>();
+            _registry = _container.Resolve<Registry>();
 
             this.checkBoxFollowLog.Checked = _config.FollowLatestLog;
 
@@ -60,14 +60,14 @@ namespace RainbowMage.OverlayPlugin
                 Name = Resources.GeneralTab,
                 Text = "",
             };
-            _generalTab.Controls.Add(new GeneralConfigTab(container));
+            _generalTab.Controls.Add(new GeneralConfigTab(_container));
 
             _eventTab = new ConfigTabPage
             {
                 Name = Resources.EventConfigTab,
                 Text = "",
             };
-            _eventTab.Controls.Add(new EventSources.BuiltinEventConfigPanel(container));
+            _eventTab.Controls.Add(new EventSources.BuiltinEventConfigPanel(_container));
 
             logBox.Text = Resources.LogNotConnectedError;
             _logger.RegisterListener(AddLogEntry);
