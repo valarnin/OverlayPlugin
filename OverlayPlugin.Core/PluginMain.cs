@@ -25,7 +25,6 @@ namespace RainbowMage.OverlayPlugin
         TabPage wsTabPage;
         WSConfigPanel wsConfigPanel;
 
-        Timer initTimer;
         Timer configSaveTimer;
         private bool clearCache = false;
         private bool _disposed;
@@ -214,88 +213,8 @@ namespace RainbowMage.OverlayPlugin
                 }
 
                 await SetPluginStatusText("Init Phase 1: Waiting for plugins to load");
-                initTimer = new Timer();
-                initTimer.Interval = 300;
-                initTimer.Tick += async (o, e) =>
-                {
-                    if (ActGlobals.oFormActMain == null)
-                    {
-                        // Something went really wrong.
-                        initTimer.Stop();
-                    }
-                    else if (ActGlobals.oFormActMain.InitActDone && ActGlobals.oFormActMain.Handle != IntPtr.Zero)
-                    {
-                        try
-                        {
-                            initTimer.Stop();
 
-                            // ** Init phase 2
-                            await SetPluginStatusText("Init Phase 2: Integrations");
-
-                            // Wrap FFXIV plugin related initialization in try/catch to allow OP to work when FFXIV plugin isn't present
-                            try
-                            {
-                                TinyIoCAutoHelper.AutoRegisterDuringInit();
-                                TinyIoCAutoHelper.AutoConstructDuringInit();
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.Log(LogLevel.Warning, "InitPlugin: Could not init FFXIV integration: {0}", ex);
-                            }
-
-                            // This timer runs on the UI thread (it has to since we create UI controls) but LoadAddons()
-                            // can block for some time. We run it on the background thread to avoid blocking the UI.
-                            // We can't run LoadAddons() in the first init phase since it checks other ACT plugins for
-                            // addons. Plugins below OverlayPlugin wouldn't have been loaded in the first init phase.
-                            // However, in the second phase all plugins have been loaded which means we can look for addons
-                            // in that list.
-                            await SetPluginStatusText("Init Phase 2: Addons");
-                            await Task.Run(LoadAddons);
-                            wsConfigPanel.RebuildOverlayOptions();
-
-                            await SetPluginStatusText("Init Phase 2: UI");
-                            await InvokeOnUIThread(() =>
-                            {
-                                try
-                                {
-                                    // Now that addons have been loaded, we can finish the overlay setup.
-                                    this.label.Text = "Init Phase 2: Overlays";
-
-                                    InitializeOverlays();
-                                    controlPanel.InitializeOverlayConfigTabs();
-
-                                    this.label.Text = "Init Phase 2: Overlay tasks";
-                                    TinyIoCAutoHelper.AutoRegisterAfterInit();
-                                    TinyIoCAutoHelper.AutoConstructAfterInit();
-
-                                    // WSServer has to start after the LoadAddons() call because clients can connect immediately
-                                    // after it's initialized and that requires the event sources to be initialized.
-                                    if (Config.WSServerRunning)
-                                    {
-                                        this.label.Text = "Init Phase 2: WSServer";
-                                        _container.Resolve<WSServer>().Start();
-                                    }
-
-                                    this.label.Text = "Init Phase 2: Save timer";
-                                    configSaveTimer.Start();
-
-                                    this.label.Text = "Initialised";
-                                    // Make the log small; startup was successful and there shouldn't be any error message to show.
-                                    controlPanel.ResizeLog();
-                                }
-                                catch (Exception ex)
-                                {
-                                    _logger.Log(LogLevel.Error, "InitPlugin: {0}", ex);
-                                }
-                            });
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.Log(LogLevel.Error, "InitPlugin: {0}", ex);
-                        }
-                    }
-                };
-                initTimer.Start();
+                ActGlobals.oFormActMain.VisibleChanged += Handle_FormActMain_VisibleChanged;
             }
             catch (Exception e)
             {
@@ -303,6 +222,77 @@ namespace RainbowMage.OverlayPlugin
                 MessageBox.Show(e.ToString());
                 FailWithLog();
                 throw;
+            }
+        }
+
+        private async void Handle_FormActMain_VisibleChanged(object sender, EventArgs e)
+        {
+            ActGlobals.oFormActMain.VisibleChanged -= Handle_FormActMain_VisibleChanged;
+            try
+            {
+                // ** Init phase 2
+                await SetPluginStatusText("Init Phase 2: Integrations");
+
+                // Wrap FFXIV plugin related initialization in try/catch to allow OP to work when FFXIV plugin isn't present
+                try
+                {
+                    TinyIoCAutoHelper.AutoRegisterDuringInit();
+                    TinyIoCAutoHelper.AutoConstructDuringInit();
+                }
+                catch (Exception ex)
+                {
+                    _logger.Log(LogLevel.Warning, "InitPlugin: Could not init FFXIV integration: {0}", ex);
+                }
+
+                // This timer runs on the UI thread (it has to since we create UI controls) but LoadAddons()
+                // can block for some time. We run it on the background thread to avoid blocking the UI.
+                // We can't run LoadAddons() in the first init phase since it checks other ACT plugins for
+                // addons. Plugins below OverlayPlugin wouldn't have been loaded in the first init phase.
+                // However, in the second phase all plugins have been loaded which means we can look for addons
+                // in that list.
+                await SetPluginStatusText("Init Phase 2: Addons");
+                await Task.Run(LoadAddons);
+                wsConfigPanel.RebuildOverlayOptions();
+
+                await SetPluginStatusText("Init Phase 2: UI");
+                await InvokeOnUIThread(() =>
+                {
+                    try
+                    {
+                        // Now that addons have been loaded, we can finish the overlay setup.
+                        this.label.Text = "Init Phase 2: Overlays";
+
+                        InitializeOverlays();
+                        controlPanel.InitializeOverlayConfigTabs();
+
+                        this.label.Text = "Init Phase 2: Overlay tasks";
+                        TinyIoCAutoHelper.AutoRegisterAfterInit();
+                        TinyIoCAutoHelper.AutoConstructAfterInit();
+
+                        // WSServer has to start after the LoadAddons() call because clients can connect immediately
+                        // after it's initialized and that requires the event sources to be initialized.
+                        if (Config.WSServerRunning)
+                        {
+                            this.label.Text = "Init Phase 2: WSServer";
+                            _container.Resolve<WSServer>().Start();
+                        }
+
+                        this.label.Text = "Init Phase 2: Save timer";
+                        configSaveTimer.Start();
+
+                        this.label.Text = "Initialised";
+                        // Make the log small; startup was successful and there shouldn't be any error message to show.
+                        controlPanel.ResizeLog();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Log(LogLevel.Error, "InitPlugin: {0}", ex);
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.Log(LogLevel.Error, "InitPlugin: {0}", ex);
             }
         }
 
@@ -553,8 +543,6 @@ namespace RainbowMage.OverlayPlugin
                     controlPanel?.Dispose();
                     wsTabPage?.Dispose();
                     wsConfigPanel?.Dispose();
-                    initTimer?.Stop();
-                    initTimer?.Dispose();
                     configSaveTimer?.Stop();
                     configSaveTimer?.Dispose();
                 }
