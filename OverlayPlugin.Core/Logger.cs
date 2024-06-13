@@ -1,5 +1,5 @@
 ﻿using System;
-using System.ComponentModel;
+using System.Collections.Generic;
 
 namespace RainbowMage.OverlayPlugin
 {
@@ -8,15 +8,19 @@ namespace RainbowMage.OverlayPlugin
     /// </summary>
     public class Logger : ILogger, ITinyIoCAutoConstructPreInit<ILogger>, ITinyIoCAutoConstructPreInit<Logger>
     {
+        public const int MaxEntries = 1000;
+
+        public event EventHandler<IReadOnlyCollection<LogEntry>> OnLog;
+
+        private long CurrentID = 0;
+
         /// <summary>
         /// 記録されたログを取得します。
         /// </summary>
-        public BindingList<LogEntry> Logs { get; private set; }
-        private Action<LogEntry> listener = null;
+        private List<LogEntry> Logs = new List<LogEntry>();
 
         public Logger()
         {
-            this.Logs = new BindingList<LogEntry>();
         }
 
         /// <summary>
@@ -36,19 +40,16 @@ namespace RainbowMage.OverlayPlugin
             System.Diagnostics.Trace.WriteLine(string.Format("{0}: {1}: {2}", level, DateTime.Now, message));
 #endif
 
-            var entry = new LogEntry(level, DateTime.Now, message);
+            var entry = new LogEntry(CurrentID++, level, DateTime.Now, message);
 
-            if (listener != null)
+            Logs.Add(entry);
+
+            while (Logs.Count > MaxEntries)
             {
-                listener(entry);
+                Logs.RemoveAt(0);
             }
-            else
-            {
-                lock (Logs)
-                {
-                    Logs.Add(entry);
-                }
-            }
+
+            OnLog?.Invoke(this, new List<LogEntry>(Logs).AsReadOnly());
         }
 
         /// <summary>
@@ -60,28 +61,6 @@ namespace RainbowMage.OverlayPlugin
         public void Log(LogLevel level, string format, params object[] args)
         {
             Log(level, string.Format(format, args));
-        }
-
-        public void RegisterListener(Action<LogEntry> listener)
-        {
-            lock (Logs)
-            {
-                foreach (var entry in Logs)
-                {
-                    listener(entry);
-                }
-
-                this.listener = listener;
-                this.Logs.Clear();
-            }
-        }
-
-        public void ClearListener()
-        {
-            lock (Logs)
-            {
-                this.listener = null;
-            }
         }
     }
 }

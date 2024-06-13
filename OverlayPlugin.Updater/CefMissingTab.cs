@@ -1,12 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Diagnostics;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace RainbowMage.OverlayPlugin.Updater
@@ -24,10 +18,23 @@ namespace RainbowMage.OverlayPlugin.Updater
             _pluginLoader = pluginLoader;
             lnkManual.Text = CefInstaller.GetUrl();
 
-            TinyIoCContainer.Current.Resolve<ILogger>().RegisterListener((entry) =>
-            {
-                logBox.AppendText($"[{entry.Time}] {entry.Level}: {entry.Message}" + Environment.NewLine);
-            });
+            TinyIoCContainer.Current.Resolve<ILogger>().OnLog += HandleOnLog;
+        }
+
+        private void HandleOnLog(object sender, IReadOnlyCollection<LogEntry> e)
+        {
+            Advanced_Combat_Tracker.ActGlobals.oFormActMain.Invoke((Action)(() => {
+                var newText = @"{\rtf1\ansi";
+
+                foreach (var entry in e)
+                {
+                    newText += entry.ToRtfString();
+                }
+
+                newText += "}";
+
+                logBox.Rtf = newText;
+            }));
         }
 
         private async void btnOpenManual_Click(object sender, EventArgs e)
