@@ -61,7 +61,8 @@ namespace RainbowMage.OverlayPlugin
             return true;
         }
 
-        public static Assembly GetAssembly(string name) {
+        public static Assembly GetAssembly(string name)
+        {
             return LoadedAssemblies[name];
         }
 

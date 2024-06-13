@@ -105,7 +105,8 @@ namespace RainbowMage.OverlayPlugin
 
         private void HandleOnLog(object sender, IReadOnlyCollection<LogEntry> e)
         {
-            PluginMain.InvokeOnUIThread(() => {
+            PluginMain.InvokeOnUIThread(() =>
+            {
                 if (!logConnected)
                 {
                     // Remove the error message about the log not being connected since it is now.

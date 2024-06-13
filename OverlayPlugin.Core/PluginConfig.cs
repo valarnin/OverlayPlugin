@@ -295,7 +295,7 @@ namespace RainbowMage.OverlayPlugin
         public List<JObject> OverlayObjects;
 
         public Dictionary<string, JObject> EventSourceConfigs { get; set; }
-        
+
         private bool _ColorblindMode;
         public bool ColorblindMode
         {

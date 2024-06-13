@@ -244,7 +244,8 @@ namespace RainbowMage.OverlayPlugin.Overlays
                 }
 
                 // Invoke on UI thread due to accessing `Handle` as part of `SetAcceptFocus`.
-                PluginMain.InvokeOnUIThread(() => {
+                PluginMain.InvokeOnUIThread(() =>
+                {
                     // Reset page-specific state
                     Overlay.SetAcceptFocus(false);
                 });

@@ -23,7 +23,8 @@ namespace RainbowMage.OverlayPlugin.Updater
 
         private void HandleOnLog(object sender, IReadOnlyCollection<LogEntry> e)
         {
-            Advanced_Combat_Tracker.ActGlobals.oFormActMain.Invoke((Action)(() => {
+            Advanced_Combat_Tracker.ActGlobals.oFormActMain.Invoke((Action)(() =>
+            {
                 var newText = @"{\rtf1\ansi";
 
                 foreach (var entry in e)

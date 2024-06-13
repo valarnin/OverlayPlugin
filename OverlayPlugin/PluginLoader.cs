@@ -182,7 +182,7 @@ namespace RainbowMage.OverlayPlugin
             {
                 if (ActGlobals.oFormActMain.InvokeRequired)
                 {
-                    return (T) ActGlobals.oFormActMain.EndInvoke(ActGlobals.oFormActMain.BeginInvoke(p));
+                    return (T)ActGlobals.oFormActMain.EndInvoke(ActGlobals.oFormActMain.BeginInvoke(p));
                 }
                 else
                 {

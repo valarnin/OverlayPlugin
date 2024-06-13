@@ -21,7 +21,8 @@ namespace RainbowMage.OverlayPlugin.Controls
 
         private void HandleOnLog(object sender, IReadOnlyCollection<LogEntry> e)
         {
-            PluginMain.InvokeOnUIThread(() => {
+            PluginMain.InvokeOnUIThread(() =>
+            {
                 var newText = @"{\rtf1\ansi";
 
                 foreach (var entry in e)
