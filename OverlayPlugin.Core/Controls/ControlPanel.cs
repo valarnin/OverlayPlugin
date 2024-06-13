@@ -3,13 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
-using System.Globalization;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using Advanced_Combat_Tracker;
 
 namespace RainbowMage.OverlayPlugin
 {
@@ -118,7 +113,12 @@ namespace RainbowMage.OverlayPlugin
                     logBox.Text = "";
                 }
 
-                var newText = @"{\rtf1\ansi" + LogEntry.DefaultColorTable;
+                var newText = @"{\rtf1\ansi";
+
+                if (_config.ColorblindMode == false)
+                {
+                    newText += LogEntry.DefaultColorTable;
+                }
 
                 foreach (var entry in e)
                 {

@@ -49,7 +49,7 @@ namespace RainbowMage.OverlayPlugin
                 Logs.RemoveAt(0);
             }
 
-            OnLog?.Invoke(this, new List<LogEntry>(Logs).AsReadOnly());
+            RefreshLogs();
         }
 
         /// <summary>
@@ -61,6 +61,11 @@ namespace RainbowMage.OverlayPlugin
         public void Log(LogLevel level, string format, params object[] args)
         {
             Log(level, string.Format(format, args));
+        }
+
+        public void RefreshLogs()
+        {
+            OnLog?.Invoke(this, new List<LogEntry>(Logs));
         }
     }
 }

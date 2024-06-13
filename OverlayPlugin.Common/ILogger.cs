@@ -12,6 +12,7 @@ namespace RainbowMage.OverlayPlugin
         event EventHandler<IReadOnlyCollection<LogEntry>> OnLog;
         void Log(LogLevel level, string message);
         void Log(LogLevel level, string format, params object[] args);
+        void RefreshLogs();
     }
 
     public class LogEntry
