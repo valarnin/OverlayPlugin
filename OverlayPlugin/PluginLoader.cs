@@ -25,6 +25,9 @@ namespace RainbowMage.OverlayPlugin
 
         public void InitPlugin(TabPage pluginScreenSpace, Label pluginStatusText)
         {
+#if DEBUG
+            Control.CheckForIllegalCrossThreadCalls = true;
+#endif
             pluginDirectory = GetPluginDirectory();
 
             if (asmResolver == null)
