@@ -162,7 +162,8 @@ namespace RainbowMage.HtmlRenderer
         {
             if (InvokeRequired)
             {
-                Invoke((Action)(() => {
+                Invoke((Action)(() =>
+                {
                     Cursor = cursor;
                 }));
             }

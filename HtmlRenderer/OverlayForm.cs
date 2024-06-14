@@ -340,11 +340,13 @@ namespace RainbowMage.HtmlRenderer
 
         }
 
-        private IntPtr SafeHandle { get
+        private IntPtr SafeHandle
+        {
+            get
             {
                 if (this.InvokeRequired)
                 {
-                    return (IntPtr) this.Invoke(new Func<IntPtr>(() =>
+                    return (IntPtr)this.Invoke(new Func<IntPtr>(() =>
                     {
                         return this.Handle;
                     }));
@@ -360,7 +362,8 @@ namespace RainbowMage.HtmlRenderer
         {
             if (InvokeRequired)
             {
-                Invoke((Action)(() => {
+                Invoke((Action)(() =>
+                {
                     Cursor = cursor;
                 }));
             }

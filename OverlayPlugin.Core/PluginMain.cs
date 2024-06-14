@@ -214,7 +214,14 @@ namespace RainbowMage.OverlayPlugin
 
                 await SetPluginStatusText("Init Phase 1: Waiting for plugins to load");
 
-                ActGlobals.oFormActMain.VisibleChanged += Handle_FormActMain_VisibleChanged;
+                if (ActGlobals.oFormActMain.InitActDone)
+                {
+                    InitPostPlugins();
+                }
+                else
+                {
+                    ActGlobals.oFormActMain.VisibleChanged += Handle_FormActMain_VisibleChanged;
+                }
             }
             catch (Exception e)
             {
@@ -225,9 +232,14 @@ namespace RainbowMage.OverlayPlugin
             }
         }
 
-        private async void Handle_FormActMain_VisibleChanged(object sender, EventArgs e)
+        private void Handle_FormActMain_VisibleChanged(object sender, EventArgs e)
         {
             ActGlobals.oFormActMain.VisibleChanged -= Handle_FormActMain_VisibleChanged;
+            InitPostPlugins();
+        }
+
+        private async void InitPostPlugins()
+        {
             try
             {
                 // ** Init phase 2
