@@ -11,7 +11,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.Combatant
         private const string charmapSignature = "488B5720B8000000E0483BD00F84????????488D0D";
 
         public CombatantMemory70(TinyIoCContainer container)
-            : base(container, charmapSignature, CombatantMemory.Size, EffectMemory.Size)
+            : base(container, charmapSignature, CombatantMemory.Size, EffectMemory.Size, 629)
         {
 
         }
