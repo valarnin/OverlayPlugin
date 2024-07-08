@@ -1,10 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
-using FFXIVClientStructs.Global.FFXIV.Client.Game.Gauge;
 #if !DEBUG
 using Newtonsoft.Json;
 #endif
@@ -54,6 +50,8 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.JobGauge
         DNC = 38,
         RPR = 39,
         SGE = 40,
+        VPR = 41,
+        PCT = 42,
     }
 
     public interface IBaseJobGauge
