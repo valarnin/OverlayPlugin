@@ -186,7 +186,7 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.JobGauge
             [FieldOffset(0x0E)] public byte LastSummonBatteryPower;
             [FieldOffset(0x0F)] public byte TimerActive;
         }
-        
+
         [StructLayout(LayoutKind.Explicit, Size = 0x10)]
         public struct DancerGauge : IBaseJobGauge
         {
