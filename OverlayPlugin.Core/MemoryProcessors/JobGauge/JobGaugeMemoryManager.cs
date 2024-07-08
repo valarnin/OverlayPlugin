@@ -56,6 +56,10 @@ namespace RainbowMage.OverlayPlugin.MemoryProcessors.JobGauge
         SGE = 40,
     }
 
+    public interface IBaseJobGauge
+    {
+    }
+
     public interface IJobGauge : IEquatable<IJobGauge>
     {
         JobGaugeJob Job { get; }
