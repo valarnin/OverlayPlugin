@@ -3,7 +3,7 @@
     public enum Server_ActorControlCategory : ushort
     {
         // Need a better name for this before merging!
-        MaybePlayVfxSlot = 0x0031, // 49
+        VfxUnknown49 = 0x0031, // 49
         SetAnimationState = 0x003E, // 62
         PlayActionTimeline = 0x0197, // 407
         EObjAnimation = 0x19D, // 413
