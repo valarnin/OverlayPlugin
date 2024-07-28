@@ -25,7 +25,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
             }
         }
 
-        public const uint LogFileLineID = 275;
+        public const uint LogFileLineID = 276;
         public const string logLineName = "DespawnObject";
         public const string OpcodeName = "DespawnObject";
 
