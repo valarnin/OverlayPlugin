@@ -108,9 +108,9 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
         {
             packetOpcodeName = packetOpcodeName ?? packetTypeName;
 
-            var global = new MachinaPacketHelper<PacketType>(packetOpcodeName, GameRegion.Global, MachinaMap.HeaderType_Global);
-            var cn = new MachinaPacketHelper<PacketType>(packetOpcodeName, GameRegion.Chinese, MachinaMap.HeaderType_CN);
-            var kr = new MachinaPacketHelper<PacketType>(packetOpcodeName, GameRegion.Korean, MachinaMap.HeaderType_KR);
+            var global = new MachinaPacketHelper<PacketType>(packetTypeName, packetOpcodeName, GameRegion.Global, MachinaMap.HeaderType_Global);
+            var cn = new MachinaPacketHelper<PacketType>(packetTypeName, packetOpcodeName, GameRegion.Chinese, MachinaMap.HeaderType_CN);
+            var kr = new MachinaPacketHelper<PacketType>(packetTypeName, packetOpcodeName, GameRegion.Korean, MachinaMap.HeaderType_KR);
 
             packetHelper = new MachinaRegionalizedPacketHelper<PacketType>(global, cn, kr);
 
@@ -139,14 +139,16 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
         public ushort Opcode { get; private set; }
         public readonly GameRegion region;
         public readonly string opcodeName;
+        public readonly string packetTypeName;
         public readonly int headerSize;
         public int packetSize { get; private set; }
 
         public readonly Type headerType;
         public Type packetType { get; private set; }
 
-        public MachinaPacketHelper(string opcodeName, GameRegion region, Type headerType)
+        public MachinaPacketHelper(string packetTypeName, string opcodeName, GameRegion region, Type headerType)
         {
+            this.packetTypeName = packetTypeName;
             this.opcodeName = opcodeName;
             this.region = region;
             headerSize = Marshal.SizeOf(headerType);
@@ -171,7 +173,7 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper
                     return;
                 }
 
-                if (!MachinaMap.GetPacketType(GameRegion.Global, opcodeName, out var localPacketType))
+                if (!MachinaMap.GetPacketType(GameRegion.Global, packetTypeName, out var localPacketType))
                 {
                     return;
                 }
