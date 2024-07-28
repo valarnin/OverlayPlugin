@@ -12,8 +12,6 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         public unsafe struct DespawnObject_v655 : IPacketStruct
         {
-            public Server_MessageHeader header;
-
             public byte spawnIndex;
             public byte padding1;
             public ushort padding2;
@@ -21,7 +19,10 @@ namespace RainbowMage.OverlayPlugin.NetworkProcessors
 
             public string ToString(long epoch, uint ActorID)
             {
-                return $"{ActorID:X8}|{spawnIndex:X2}";
+                // The `ActorID` from the packet header is just the current player's ID
+                // There's no data for the actual actor ID, instead the client is expected to
+                // look up the correct actor via the index.
+                return $"{spawnIndex:X2}";
             }
         }
 
