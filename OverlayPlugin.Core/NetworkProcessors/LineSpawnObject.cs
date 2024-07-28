@@ -16,7 +16,6 @@ Ignore the grossly desynced timestamps, I had VS debugger attached and a breakpo
 These are despawned at the end of the fight:
 276|2024-07-28T14:54:54.0140000-04:00|04|315e1c7c6cc49ec6
 276|2024-07-28T14:54:54.0140000-04:00|05|988744f812b56584
-
  */
 
 namespace RainbowMage.OverlayPlugin.NetworkProcessors
