@@ -80,6 +80,10 @@ namespace RainbowMage.OverlayPlugin
         private object logOutput;
         private Func<long, DateTime> machinaEpochToDateTimeWrapper;
 
+        // For unit testing only.
+        public FFXIVRepository() {
+        }
+
         public FFXIVRepository(TinyIoCContainer container)
         {
             logger = container.Resolve<ILogger>();
@@ -333,7 +337,7 @@ namespace RainbowMage.OverlayPlugin
             return repo.GetSelectedLanguageID();
         }
 
-        public string GetLocaleString()
+        public virtual string GetLocaleString()
         {
             switch (GetLanguage())
             {
