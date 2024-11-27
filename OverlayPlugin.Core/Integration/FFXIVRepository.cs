@@ -81,7 +81,8 @@ namespace RainbowMage.OverlayPlugin
         private Func<long, DateTime> machinaEpochToDateTimeWrapper;
 
         // For unit testing only.
-        public FFXIVRepository() {
+        public FFXIVRepository()
+        {
         }
 
         public FFXIVRepository(TinyIoCContainer container)

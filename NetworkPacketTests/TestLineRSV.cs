@@ -1,9 +1,9 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper;
-using System;
-using System.Runtime.InteropServices;
-using RainbowMage.OverlayPlugin.NetworkProcessors;
+﻿using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using RainbowMage.OverlayPlugin.NetworkProcessors;
+using RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper;
 
 namespace RainbowMage.OverlayPlugin.NetworkPacketTests
 {

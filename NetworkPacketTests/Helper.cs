@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using System.Reflection;
-using RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper;
 using Moq;
+using RainbowMage.OverlayPlugin.NetworkProcessors.PacketHelper;
 
 namespace RainbowMage.OverlayPlugin.NetworkPacketTests
 {
@@ -23,7 +23,8 @@ namespace RainbowMage.OverlayPlugin.NetworkPacketTests
 
             var bt = t.BaseType;
 
-            if (bt != null) {
+            if (bt != null)
+            {
                 return FindField(bt, field);
             }
 
